@@ -81,7 +81,9 @@
         </div>
         <span sec:authentication="name"></span>
         <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
-        <a th:href="@{/logout}" class="btn-logout">로그아웃</a>
+        <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
+            <button type="submit" class="btn-logout">로그아웃</button>
+        </form>
     </div>
 </div>
 
