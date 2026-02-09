@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 등록/수정</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; }
+        .form-card { background: white; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
+        input, textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        input:focus, textarea:focus { outline: none; border-color: #4CAF50; }
+        textarea { height: 80px; resize: vertical; }
+        .btn { display: inline-block; padding: 10px 24px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-cancel { background: #999; color: white; }
+        .btn:hover { opacity: 0.85; }
+        .btn-group { display: flex; gap: 12px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 th:text="${product.id != null ? '상품 수정' : '상품 등록'}">상품 등록/수정</h1>
+
+    <div class="form-card">
+        <form th:action="@{/products}" th:object="${product}" method="post">
+            <input type="hidden" th:field="*{id}"/>
+
+            <div class="form-group">
+                <label for="name">상품명</label>
+                <input type="text" id="name" th:field="*{name}" required placeholder="상품명을 입력하세요"/>
+            </div>
+
+            <div class="form-group">
+                <label for="category">카테고리</label>
+                <input type="text" id="category" th:field="*{category}" placeholder="카테고리를 입력하세요"/>
+            </div>
+
+            <div class="form-group">
+                <label for="price">가격</label>
+                <input type="number" id="price" th:field="*{price}" step="0.01" min="0" required placeholder="0"/>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">수량</label>
+                <input type="number" id="quantity" th:field="*{quantity}" min="0" required placeholder="0"/>
+            </div>
+
+            <div class="form-group">
+                <label for="description">설명</label>
+                <textarea id="description" th:field="*{description}" placeholder="상품 설명을 입력하세요"></textarea>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">저장</button>
+                <a th:href="@{/products}" class="btn btn-cancel">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

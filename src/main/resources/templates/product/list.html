@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; }
+        .btn { display: inline-block; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-edit { background: #2196F3; color: white; }
+        .btn-delete { background: #f44336; color: white; }
+        .btn:hover { opacity: 0.85; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 16px; }
+        th { background: #333; color: white; padding: 12px 16px; text-align: left; }
+        td { padding: 10px 16px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f9f9f9; }
+        .actions { display: flex; gap: 8px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .price { text-align: right; }
+        .quantity { text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="top-bar">
+        <h1>상품 관리</h1>
+        <a th:href="@{/products/new}" class="btn btn-primary">+ 상품 추가</a>
+    </div>
+
+    <table th:if="${!products.isEmpty()}">
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>상품명</th>
+            <th>카테고리</th>
+            <th class="price">가격</th>
+            <th class="quantity">수량</th>
+            <th>설명</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="product : ${products}">
+            <td th:text="${product.id}"></td>
+            <td th:text="${product.name}"></td>
+            <td th:text="${product.category}"></td>
+            <td class="price" th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')}"></td>
+            <td class="quantity" th:text="${product.quantity}"></td>
+            <td th:text="${product.description}"></td>
+            <td>
+                <div class="actions">
+                    <a th:href="@{/products/{id}/edit(id=${product.id})}" class="btn btn-edit">수정</a>
+                    <a th:href="@{/products/{id}/delete(id=${product.id})}" class="btn btn-delete"
+                       onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:if="${products.isEmpty()}" class="empty">
+        <p>등록된 상품이 없습니다. 첫 번째 상품을 추가해 보세요!</p>
+    </div>
+</div>
+</body>
+</html>
