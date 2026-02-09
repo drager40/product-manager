@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>NHN Expense Manager</title>
+    <title>NHN 경비 관리 - 경비 등록</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
@@ -26,7 +26,7 @@
 </head>
 <body>
 <div class="header">
-    <h1>NHN Expense Manager</h1>
+    <h1><a href="/" style="color:white; text-decoration:none;">NHN 경비 관리</a></h1>
 </div>
 <div class="container">
     <h2 th:text="${expense.id != null ? '경비 수정' : '경비 등록'}"></h2>
