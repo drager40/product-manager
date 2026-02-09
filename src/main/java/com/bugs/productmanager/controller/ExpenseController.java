@@ -41,17 +41,21 @@ public class ExpenseController {
             @RequestParam(required = false) String ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
+            @RequestParam(required = false) String purpose,
+            @RequestParam(required = false) String storeName,
             Authentication auth,
             Model model) {
 
         List<String> ymList = expenseService.findDistinctYm();
         List<String> categoryList = expenseService.findDistinctCategory();
         List<String> divisionList = expenseService.findDistinctDivision();
+        List<String> purposeList = expenseService.findDistinctPurpose();
+        List<String> storeNameList = expenseService.findDistinctStoreName();
 
         // 필터 없으면 최신 월로 기본 설정
-        ym = expenseService.resolveDefaultYm(ym, category, division);
+        ym = expenseService.resolveDefaultYm(ym, category, division, purpose, storeName);
 
-        List<Expense> expenses = expenseService.findFiltered(ym, category, division);
+        List<Expense> expenses = expenseService.findFiltered(ym, category, division, purpose, storeName);
         BigDecimal totalAmount = expenseService.calcTotalAmount(expenses);
 
         List<Budget> budgets = budgetService.findFiltered(ym, category, division);
@@ -72,9 +76,13 @@ public class ExpenseController {
         model.addAttribute("ymList", ymList);
         model.addAttribute("categoryList", categoryList);
         model.addAttribute("divisionList", divisionList);
+        model.addAttribute("purposeList", purposeList);
+        model.addAttribute("storeNameList", storeNameList);
         model.addAttribute("selectedYm", ym);
         model.addAttribute("selectedCategory", category != null ? category : "");
         model.addAttribute("selectedDivision", division != null ? division : "");
+        model.addAttribute("selectedPurpose", purpose != null ? purpose : "");
+        model.addAttribute("selectedStoreName", storeName != null ? storeName : "");
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("budgetList", budgets);
         model.addAttribute("usedAmountMap", expenseService.calcUsedAmountByBudgetKey(expenses));
@@ -184,9 +192,11 @@ public class ExpenseController {
             @RequestParam(required = false) String ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
+            @RequestParam(required = false) String purpose,
+            @RequestParam(required = false) String storeName,
             HttpServletResponse response) throws IOException {
 
-        List<Expense> expenses = expenseService.findFiltered(ym, category, division);
+        List<Expense> expenses = expenseService.findFiltered(ym, category, division, purpose, storeName);
         List<Budget> budgets = budgetService.findFiltered(ym, category, division);
 
         boolean hasYm = ym != null && !ym.isEmpty();

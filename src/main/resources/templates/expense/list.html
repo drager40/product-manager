@@ -112,10 +112,24 @@
                 <option th:each="d : ${divisionList}" th:value="${d}" th:text="${d}" th:selected="${d == selectedDivision}"></option>
             </select>
         </div>
+        <div class="filter-group">
+            <label>용도</label>
+            <select name="purpose">
+                <option value="">전체</option>
+                <option th:each="p : ${purposeList}" th:value="${p}" th:text="${p}" th:selected="${p == selectedPurpose}"></option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>상호</label>
+            <select name="storeName">
+                <option value="">전체</option>
+                <option th:each="s : ${storeNameList}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStoreName}"></option>
+            </select>
+        </div>
         <button type="submit" class="btn-filter">조회</button>
         <a th:href="@{/expenses}" class="btn-reset">초기화</a>
         <div class="btn-group-right">
-            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
+            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision}, purpose=${selectedPurpose}, storeName=${selectedStoreName})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
             <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">&#x1F4E4; 업로드</a>
             <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비 추가</a>
             <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산 추가</a>

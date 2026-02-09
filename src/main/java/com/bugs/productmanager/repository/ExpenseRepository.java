@@ -2,11 +2,12 @@ package com.bugs.productmanager.repository;
 
 import com.bugs.productmanager.model.Expense;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface ExpenseRepository extends JpaRepository<Expense, Long> {
+public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpecificationExecutor<Expense> {
 
     List<Expense> findByYmOrderByExpenseDateAsc(String ym);
 
@@ -30,4 +31,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     @Query("SELECT DISTINCT e.division FROM Expense e ORDER BY e.division")
     List<String> findDistinctDivision();
+
+    @Query("SELECT DISTINCT e.purpose FROM Expense e WHERE e.purpose IS NOT NULL AND e.purpose <> '' ORDER BY e.purpose")
+    List<String> findDistinctPurpose();
+
+    @Query("SELECT DISTINCT e.storeName FROM Expense e WHERE e.storeName IS NOT NULL AND e.storeName <> '' ORDER BY e.storeName")
+    List<String> findDistinctStoreName();
 }

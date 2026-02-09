@@ -2,6 +2,8 @@ package com.bugs.productmanager.service;
 
 import com.bugs.productmanager.model.Expense;
 import com.bugs.productmanager.repository.ExpenseRepository;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,27 +21,23 @@ public class ExpenseService {
     }
 
     public List<Expense> findFiltered(String ym, String category, String division) {
-        boolean hasYm = ym != null && !ym.isEmpty();
-        boolean hasCat = category != null && !category.isEmpty();
-        boolean hasDiv = division != null && !division.isEmpty();
+        return findFiltered(ym, category, division, null, null);
+    }
 
-        if (hasYm && hasCat && hasDiv) {
-            return expenseRepository.findByYmAndCategoryAndDivisionOrderByExpenseDateAsc(ym, category, division);
-        } else if (hasYm && hasCat) {
-            return expenseRepository.findByYmAndCategoryOrderByExpenseDateAsc(ym, category);
-        } else if (hasYm && hasDiv) {
-            return expenseRepository.findByYmAndDivisionOrderByExpenseDateAsc(ym, division);
-        } else if (hasYm) {
-            return expenseRepository.findByYmOrderByExpenseDateAsc(ym);
-        } else if (hasCat && hasDiv) {
-            return expenseRepository.findByCategoryAndDivisionOrderByExpenseDateAsc(category, division);
-        } else if (hasCat) {
-            return expenseRepository.findByCategoryOrderByExpenseDateAsc(category);
-        } else if (hasDiv) {
-            return expenseRepository.findByDivisionOrderByExpenseDateAsc(division);
-        } else {
-            return expenseRepository.findAll();
-        }
+    public List<Expense> findFiltered(String ym, String category, String division, String purpose, String storeName) {
+        Specification<Expense> spec = Specification.where(null);
+
+        if (hasValue(ym))        spec = spec.and((r, q, cb) -> cb.equal(r.get("ym"), ym));
+        if (hasValue(category))  spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
+        if (hasValue(division))  spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
+        if (hasValue(purpose))   spec = spec.and((r, q, cb) -> cb.equal(r.get("purpose"), purpose));
+        if (hasValue(storeName)) spec = spec.and((r, q, cb) -> cb.equal(r.get("storeName"), storeName));
+
+        return expenseRepository.findAll(spec, Sort.by("expenseDate").ascending());
+    }
+
+    private boolean hasValue(String s) {
+        return s != null && !s.isEmpty();
     }
 
     public BigDecimal calcTotalAmount(List<Expense> expenses) {
@@ -77,6 +75,14 @@ public class ExpenseService {
         return expenseRepository.findDistinctDivision();
     }
 
+    public List<String> findDistinctPurpose() {
+        return expenseRepository.findDistinctPurpose();
+    }
+
+    public List<String> findDistinctStoreName() {
+        return expenseRepository.findDistinctStoreName();
+    }
+
     /**
      * 예산별(ym+category+division) 사용금액 합계 맵
      */
@@ -92,12 +98,8 @@ public class ExpenseService {
     /**
      * ym 필터가 없을 때 기본 ym 결정 (최신 월)
      */
-    public String resolveDefaultYm(String ym, String category, String division) {
-        boolean hasYm = ym != null && !ym.isEmpty();
-        boolean hasCat = category != null && !category.isEmpty();
-        boolean hasDiv = division != null && !division.isEmpty();
-
-        if (!hasYm && !hasCat && !hasDiv) {
+    public String resolveDefaultYm(String ym, String category, String division, String purpose, String storeName) {
+        if (!hasValue(ym) && !hasValue(category) && !hasValue(division) && !hasValue(purpose) && !hasValue(storeName)) {
             List<String> ymList = findDistinctYm();
             if (!ymList.isEmpty()) {
                 return ymList.get(0);
