@@ -30,8 +30,8 @@ public class ExpenseService {
         if (hasValue(ym))        spec = spec.and((r, q, cb) -> cb.equal(r.get("ym"), ym));
         if (hasValue(category))  spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
         if (hasValue(division))  spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
-        if (hasValue(purpose))   spec = spec.and((r, q, cb) -> cb.equal(r.get("purpose"), purpose));
-        if (hasValue(storeName)) spec = spec.and((r, q, cb) -> cb.equal(r.get("storeName"), storeName));
+        if (hasValue(purpose))   spec = spec.and((r, q, cb) -> cb.like(r.get("purpose"), "%" + purpose + "%"));
+        if (hasValue(storeName)) spec = spec.and((r, q, cb) -> cb.like(r.get("storeName"), "%" + storeName + "%"));
 
         return expenseRepository.findAll(spec, Sort.by("expenseDate").ascending());
     }

@@ -19,15 +19,15 @@
 
         .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
 
-        .filter-bar { background: white; padding: 20px 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; gap: 4px; }
-        .filter-group label { font-size: 12px; font-weight: 600; color: #666; }
-        .filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 140px; }
-        .btn-filter { padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .filter-bar { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: nowrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #666; }
+        .filter-group select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 110px; }
+        .btn-filter { padding: 7px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-filter:hover { background: #5a6fd6; }
-        .btn-reset { padding: 8px 16px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
-        .btn-group-right { display: flex; gap: 8px; margin-left: auto; }
-        .btn-add { padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-reset { padding: 7px 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .btn-group-right { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+        .btn-add { padding: 7px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; white-space: nowrap; }
         .btn-add:hover { background: #43a047; }
 
         .summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -113,23 +113,19 @@
             </select>
         </div>
         <div class="filter-group">
-            <label>용도</label>
-            <select name="purpose">
-                <option value="">전체</option>
-                <option th:each="p : ${purposeList}" th:value="${p}" th:text="${p}" th:selected="${p == selectedPurpose}"></option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>상호</label>
-            <select name="storeName">
-                <option value="">전체</option>
-                <option th:each="s : ${storeNameList}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStoreName}"></option>
-            </select>
+            <label>상세조건</label>
+            <div style="display:flex; gap:4px;">
+                <select name="searchType" style="min-width:80px;">
+                    <option value="storeName" th:selected="${selectedSearchType == 'storeName'}">상호</option>
+                    <option value="purpose" th:selected="${selectedSearchType == 'purpose'}">용도</option>
+                </select>
+                <input type="text" name="searchKeyword" th:value="${selectedSearchKeyword}" placeholder="검색어 입력" style="width:150px; padding:8px 12px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
+            </div>
         </div>
         <button type="submit" class="btn-filter">조회</button>
         <a th:href="@{/expenses}" class="btn-reset">초기화</a>
         <div class="btn-group-right">
-            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision}, purpose=${selectedPurpose}, storeName=${selectedStoreName})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
+            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision}, searchType=${selectedSearchType}, searchKeyword=${selectedSearchKeyword})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
             <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">&#x1F4E4; 업로드</a>
             <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비 추가</a>
             <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산 추가</a>

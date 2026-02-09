@@ -41,16 +41,25 @@ public class ExpenseController {
             @RequestParam(required = false) String ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
-            @RequestParam(required = false) String purpose,
-            @RequestParam(required = false) String storeName,
+            @RequestParam(required = false, defaultValue = "storeName") String searchType,
+            @RequestParam(required = false) String searchKeyword,
             Authentication auth,
             Model model) {
+
+        // searchType + searchKeyword → purpose / storeName 변환
+        String purpose = null;
+        String storeName = null;
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            if ("storeName".equals(searchType)) {
+                storeName = searchKeyword.trim();
+            } else {
+                purpose = searchKeyword.trim();
+            }
+        }
 
         List<String> ymList = expenseService.findDistinctYm();
         List<String> categoryList = expenseService.findDistinctCategory();
         List<String> divisionList = expenseService.findDistinctDivision();
-        List<String> purposeList = expenseService.findDistinctPurpose();
-        List<String> storeNameList = expenseService.findDistinctStoreName();
 
         // 필터 없으면 최신 월로 기본 설정
         ym = expenseService.resolveDefaultYm(ym, category, division, purpose, storeName);
@@ -76,13 +85,11 @@ public class ExpenseController {
         model.addAttribute("ymList", ymList);
         model.addAttribute("categoryList", categoryList);
         model.addAttribute("divisionList", divisionList);
-        model.addAttribute("purposeList", purposeList);
-        model.addAttribute("storeNameList", storeNameList);
         model.addAttribute("selectedYm", ym);
         model.addAttribute("selectedCategory", category != null ? category : "");
         model.addAttribute("selectedDivision", division != null ? division : "");
-        model.addAttribute("selectedPurpose", purpose != null ? purpose : "");
-        model.addAttribute("selectedStoreName", storeName != null ? storeName : "");
+        model.addAttribute("selectedSearchType", searchType != null ? searchType : "storeName");
+        model.addAttribute("selectedSearchKeyword", searchKeyword != null ? searchKeyword : "");
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("budgetList", budgets);
         model.addAttribute("usedAmountMap", expenseService.calcUsedAmountByBudgetKey(expenses));
@@ -192,10 +199,19 @@ public class ExpenseController {
             @RequestParam(required = false) String ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
-            @RequestParam(required = false) String purpose,
-            @RequestParam(required = false) String storeName,
+            @RequestParam(required = false, defaultValue = "storeName") String searchType,
+            @RequestParam(required = false) String searchKeyword,
             HttpServletResponse response) throws IOException {
 
+        String purpose = null;
+        String storeName = null;
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            if ("storeName".equals(searchType)) {
+                storeName = searchKeyword.trim();
+            } else {
+                purpose = searchKeyword.trim();
+            }
+        }
         List<Expense> expenses = expenseService.findFiltered(ym, category, division, purpose, storeName);
         List<Budget> budgets = budgetService.findFiltered(ym, category, division);
 
