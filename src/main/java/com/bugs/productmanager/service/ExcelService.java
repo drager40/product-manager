@@ -36,57 +36,104 @@ public class ExcelService {
         try (InputStream is = file.getInputStream();
              Workbook workbook = WorkbookFactory.create(is)) {
 
-            Sheet sheet = workbook.getSheetAt(0);
-            List<Map<String, Object>> sections = parseSections(sheet);
-
-            if (sections.isEmpty()) {
-                throw new IllegalArgumentException("엑셀에서 섹션을 찾을 수 없습니다. 형식을 확인해주세요.");
-            }
-
-            YearMonth yearMonth = YearMonth.parse(ym);
-            LocalDate defaultDate = yearMonth.atEndOfMonth();
+            int totalSheets = workbook.getNumberOfSheets();
+            boolean hasYm = ym != null && !ym.trim().isEmpty();
 
             int budgetCount = 0;
             int expenseCount = 0;
 
-            for (int i = 0; i < sections.size(); i++) {
-                Map<String, Object> sec = sections.get(i);
-                String cat = (String) sec.get("cat");
-                String div = (String) sec.get("div");
-                double monthly = (double) sec.get("monthly");
-                double prevRem = (double) sec.get("prev");
-                int startRow = (int) sec.get("startRow");
+            for (int s = 0; s < totalSheets; s++) {
+                Sheet sheet = workbook.getSheetAt(s);
+                List<Map<String, Object>> sections = parseSections(sheet);
+                if (sections.isEmpty()) continue;
 
-                // Save/update budget
-                Budget budget = new Budget();
-                budget.setYm(ym);
-                budget.setCategory(cat);
-                budget.setDivision(div);
-                budget.setMonthlyAmount(BigDecimal.valueOf((long) monthly));
-                budget.setPrevRemaining(BigDecimal.valueOf((long) prevRem));
-                budgetService.saveOrUpdate(budget);
-                budgetCount++;
+                // 시트 이름에서 년월 추출 시도 (예: "2026-01", "202601")
+                String sheetYm = hasYm ? ym.trim() : extractYmFromSheetName(sheet.getSheetName());
 
-                // Parse expense rows
-                int dataStartRow = startRow + 2;
-                int endRow = (i + 1 < sections.size())
-                        ? (int) sections.get(i + 1).get("startRow") - 1
-                        : sheet.getLastRowNum();
+                for (int i = 0; i < sections.size(); i++) {
+                    Map<String, Object> sec = sections.get(i);
+                    String cat = (String) sec.get("cat");
+                    String div = (String) sec.get("div");
+                    double monthly = (double) sec.get("monthly");
+                    double prevRem = (double) sec.get("prev");
+                    int startRow = (int) sec.get("startRow");
 
-                for (int r = dataStartRow; r <= endRow; r++) {
-                    Row dataRow = sheet.getRow(r);
-                    if (dataRow == null) continue;
+                    // Parse expense rows
+                    int dataStartRow = startRow + 2;
+                    int endRow = (i + 1 < sections.size())
+                            ? (int) sections.get(i + 1).get("startRow") - 1
+                            : sheet.getLastRowNum();
 
-                    Expense expense = parseExpenseRow(dataRow, ym, cat, div, defaultDate);
-                    if (expense != null) {
-                        expenseService.save(expense);
-                        expenseCount++;
+                    // 년월이 없으면 첫 번째 데이터행의 날짜에서 추출
+                    String sectionYm = sheetYm;
+                    if (sectionYm == null) {
+                        sectionYm = extractYmFromRows(sheet, dataStartRow, endRow);
+                    }
+                    if (sectionYm == null) {
+                        continue; // 년월을 알 수 없으면 스킵
+                    }
+
+                    YearMonth yearMonth = YearMonth.parse(sectionYm);
+                    LocalDate defaultDate = yearMonth.atEndOfMonth();
+
+                    // Save/update budget
+                    Budget budget = new Budget();
+                    budget.setYm(sectionYm);
+                    budget.setCategory(cat);
+                    budget.setDivision(div);
+                    budget.setMonthlyAmount(BigDecimal.valueOf((long) monthly));
+                    budget.setPrevRemaining(BigDecimal.valueOf((long) prevRem));
+                    budgetService.saveOrUpdate(budget);
+                    budgetCount++;
+
+                    for (int r = dataStartRow; r <= endRow; r++) {
+                        Row dataRow = sheet.getRow(r);
+                        if (dataRow == null) continue;
+
+                        Expense expense = parseExpenseRow(dataRow, sectionYm, cat, div, defaultDate);
+                        if (expense != null) {
+                            expenseService.save(expense);
+                            expenseCount++;
+                        }
                     }
                 }
             }
 
+            if (budgetCount == 0 && expenseCount == 0) {
+                throw new IllegalArgumentException("엑셀에서 섹션을 찾을 수 없습니다. 형식을 확인해주세요.");
+            }
+
             return new UploadResult(budgetCount, expenseCount);
         }
+    }
+
+    private String extractYmFromSheetName(String name) {
+        if (name == null) return null;
+        // "2026-01" 형태
+        if (name.matches(".*\\d{4}-\\d{2}.*")) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{4}-\\d{2})").matcher(name);
+            if (m.find()) return m.group(1);
+        }
+        // "202601" 형태
+        if (name.matches(".*\\d{6}.*")) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{4})(\\d{2})").matcher(name);
+            if (m.find()) return m.group(1) + "-" + m.group(2);
+        }
+        return null;
+    }
+
+    private String extractYmFromRows(Sheet sheet, int startRow, int endRow) {
+        for (int r = startRow; r <= endRow; r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+            Cell dateCell = row.getCell(0);
+            if (dateCell != null && dateCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dateCell)) {
+                java.util.Date d = dateCell.getDateCellValue();
+                LocalDate ld = d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                return ld.getYear() + "-" + String.format("%02d", ld.getMonthValue());
+            }
+        }
+        return null;
     }
 
     private List<Map<String, Object>> parseSections(Sheet sheet) {

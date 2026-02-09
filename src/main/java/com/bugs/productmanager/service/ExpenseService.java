@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,13 +22,15 @@ public class ExpenseService {
     }
 
     public List<Expense> findFiltered(String ym, String category, String division) {
-        return findFiltered(ym, category, division, null, null);
+        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, division, null, null);
     }
 
-    public List<Expense> findFiltered(String ym, String category, String division, String purpose, String storeName) {
+    public List<Expense> findFiltered(List<String> ymValues, String category, String division, String purpose, String storeName) {
         Specification<Expense> spec = Specification.where(null);
 
-        if (hasValue(ym))        spec = spec.and((r, q, cb) -> cb.equal(r.get("ym"), ym));
+        if (ymValues != null && !ymValues.isEmpty()) {
+            spec = spec.and((r, q, cb) -> r.get("ym").in(ymValues));
+        }
         if (hasValue(category))  spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
         if (hasValue(division))  spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
         if (hasValue(purpose))   spec = spec.and((r, q, cb) -> cb.like(r.get("purpose"), "%" + purpose + "%"));
@@ -98,13 +101,14 @@ public class ExpenseService {
     /**
      * ym 필터가 없을 때 기본 ym 결정 (최신 월)
      */
-    public String resolveDefaultYm(String ym, String category, String division, String purpose, String storeName) {
-        if (!hasValue(ym) && !hasValue(category) && !hasValue(division) && !hasValue(purpose) && !hasValue(storeName)) {
+    public List<String> resolveDefaultYmList(List<String> ymValues, String category, String division, String purpose, String storeName) {
+        boolean hasYm = ymValues != null && !ymValues.isEmpty();
+        if (!hasYm && !hasValue(category) && !hasValue(division) && !hasValue(purpose) && !hasValue(storeName)) {
             List<String> ymList = findDistinctYm();
             if (!ymList.isEmpty()) {
-                return ymList.get(0);
+                return List.of(ymList.get(0));
             }
         }
-        return ym;
+        return ymValues != null ? ymValues : List.of();
     }
 }

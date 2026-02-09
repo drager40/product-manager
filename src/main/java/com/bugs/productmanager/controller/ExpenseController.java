@@ -38,7 +38,7 @@ public class ExpenseController {
 
     @GetMapping
     public String list(
-            @RequestParam(required = false) String ym,
+            @RequestParam(required = false) List<String> ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
             @RequestParam(required = false, defaultValue = "storeName") String searchType,
@@ -57,17 +57,20 @@ public class ExpenseController {
             }
         }
 
+        // 빈 값 제거
+        List<String> ymValues = ym != null ? ym.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
+
         List<String> ymList = expenseService.findDistinctYm();
         List<String> categoryList = expenseService.findDistinctCategory();
         List<String> divisionList = expenseService.findDistinctDivision();
 
         // 필터 없으면 최신 월로 기본 설정
-        ym = expenseService.resolveDefaultYm(ym, category, division, purpose, storeName);
+        ymValues = expenseService.resolveDefaultYmList(ymValues, category, division, purpose, storeName);
 
-        List<Expense> expenses = expenseService.findFiltered(ym, category, division, purpose, storeName);
+        List<Expense> expenses = expenseService.findFiltered(ymValues, category, division, purpose, storeName);
         BigDecimal totalAmount = expenseService.calcTotalAmount(expenses);
 
-        List<Budget> budgets = budgetService.findFiltered(ym, category, division);
+        List<Budget> budgets = budgetService.findFiltered(ymValues, category, division);
         BigDecimal monthlyAmount = budgetService.calcMonthlyAmount(budgets);
         BigDecimal prevRemaining = budgetService.calcPrevRemaining(budgets);
         BigDecimal budgetTotal = monthlyAmount.add(prevRemaining);
@@ -85,7 +88,7 @@ public class ExpenseController {
         model.addAttribute("ymList", ymList);
         model.addAttribute("categoryList", categoryList);
         model.addAttribute("divisionList", divisionList);
-        model.addAttribute("selectedYm", ym);
+        model.addAttribute("selectedYmList", ymValues);
         model.addAttribute("selectedCategory", category != null ? category : "");
         model.addAttribute("selectedDivision", division != null ? division : "");
         model.addAttribute("selectedSearchType", searchType != null ? searchType : "storeName");
@@ -176,7 +179,7 @@ public class ExpenseController {
 
     @PostMapping("/upload")
     public String uploadExcel(@RequestParam("file") MultipartFile file,
-                              @RequestParam("ym") String ym,
+                              @RequestParam(value = "ym", required = false) String ym,
                               RedirectAttributes redirectAttributes) {
         if (file.isEmpty()) {
             redirectAttributes.addFlashAttribute("errorMsg", "파일을 선택해주세요.");
@@ -196,7 +199,7 @@ public class ExpenseController {
 
     @GetMapping("/download")
     public void downloadExcel(
-            @RequestParam(required = false) String ym,
+            @RequestParam(required = false) List<String> ym,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String division,
             @RequestParam(required = false, defaultValue = "storeName") String searchType,
@@ -212,14 +215,16 @@ public class ExpenseController {
                 purpose = searchKeyword.trim();
             }
         }
-        List<Expense> expenses = expenseService.findFiltered(ym, category, division, purpose, storeName);
-        List<Budget> budgets = budgetService.findFiltered(ym, category, division);
+        List<String> ymValues = ym != null ? ym.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
+        List<Expense> expenses = expenseService.findFiltered(ymValues, category, division, purpose, storeName);
+        List<Budget> budgets = budgetService.findFiltered(ymValues, category, division);
 
-        boolean hasYm = ym != null && !ym.isEmpty();
+        boolean hasYm = !ymValues.isEmpty();
         boolean hasCat = category != null && !category.isEmpty();
 
         String filename = "경비예산";
-        if (hasYm) filename += "_" + ym.replace("-", "");
+        if (hasYm && ymValues.size() == 1) filename += "_" + ymValues.get(0).replace("-", "");
+        else if (hasYm) filename += "_" + ymValues.size() + "개월";
         if (hasCat) filename += "_" + category;
         filename += ".xlsx";
 

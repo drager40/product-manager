@@ -19,13 +19,23 @@
 
         .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
 
-        .filter-bar { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: nowrap; }
+        .filter-bar { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
         .filter-group label { font-size: 11px; font-weight: 600; color: #666; }
-        .filter-group select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 110px; }
-        .btn-filter { padding: 7px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .filter-group select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 110px; height: 34px; }
+
+        .ym-dropdown { position: relative; }
+        .ym-dropdown-btn { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 140px; height: 34px; background: white; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        .ym-dropdown-btn::after { content: '\25BC'; font-size: 9px; color: #999; margin-left: 8px; }
+        .ym-dropdown-list { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 100; min-width: 160px; max-height: 280px; overflow-y: auto; margin-top: 2px; }
+        .ym-dropdown-list.open { display: block; }
+        .ym-dropdown-list label { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 400; margin: 0; }
+        .ym-dropdown-list label:hover { background: #f5f5ff; }
+        .ym-dropdown-list label.all-label { border-bottom: 1px solid #eee; font-weight: 600; }
+        .ym-dropdown-list input[type="checkbox"] { accent-color: #667eea; }
+        .btn-filter { padding: 0 16px; height: 34px; line-height: 34px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; display: inline-flex; align-items: center; }
         .btn-filter:hover { background: #5a6fd6; }
-        .btn-reset { padding: 7px 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .btn-reset { padding: 0 12px; height: 34px; line-height: 34px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; }
         .btn-group-right { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
         .btn-add { padding: 7px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; white-space: nowrap; }
         .btn-add:hover { background: #43a047; }
@@ -55,7 +65,7 @@
         td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
         tr:hover { background: #f8f9ff; }
         .amount { text-align: right; font-weight: 600; }
-        .badge { display: inline-block; padding: 4px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; }
+        .badge { display: inline-block; padding: 4px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; min-width: 60px; text-align: center; }
         .badge-link { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
         .badge-bugs { background: #fce4ec; color: #c62828; border: 1px solid #ef9a9a; }
         .actions { display: flex; gap: 6px; }
@@ -93,10 +103,15 @@
     <form class="filter-bar" th:action="@{/expenses}" method="get">
         <div class="filter-group">
             <label>월</label>
-            <select name="ym">
-                <option value="">전체</option>
-                <option th:each="y : ${ymList}" th:value="${y}" th:text="${y}" th:selected="${y == selectedYm}"></option>
-            </select>
+            <div class="ym-dropdown" id="ymDropdown">
+                <button type="button" class="ym-dropdown-btn" id="ymDropdownBtn">전체</button>
+                <div class="ym-dropdown-list" id="ymDropdownList">
+                    <label class="all-label"><input type="checkbox" id="ymAll" checked> 전체</label>
+                    <th:block th:each="y : ${ymList}">
+                        <label><input type="checkbox" name="ym" th:value="${y}" th:checked="${selectedYmList.contains(y)}" class="ym-cb"> <span th:text="${y}"></span></label>
+                    </th:block>
+                </div>
+            </div>
         </div>
         <div class="filter-group">
             <label>분류</label>
@@ -115,20 +130,20 @@
         <div class="filter-group">
             <label>상세조건</label>
             <div style="display:flex; gap:4px;">
-                <select name="searchType" style="min-width:80px;">
+                <select name="searchType" style="min-width:80px; height:34px; padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px;">
                     <option value="storeName" th:selected="${selectedSearchType == 'storeName'}">상호</option>
                     <option value="purpose" th:selected="${selectedSearchType == 'purpose'}">용도</option>
                 </select>
-                <input type="text" name="searchKeyword" th:value="${selectedSearchKeyword}" placeholder="검색어 입력" style="width:150px; padding:8px 12px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
+                <input type="text" name="searchKeyword" th:value="${selectedSearchKeyword}" placeholder="검색어 입력" style="width:150px; padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; height:34px;">
             </div>
         </div>
         <button type="submit" class="btn-filter">조회</button>
         <a th:href="@{/expenses}" class="btn-reset">초기화</a>
         <div class="btn-group-right">
-            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision}, searchType=${selectedSearchType}, searchKeyword=${selectedSearchKeyword})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
-            <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">&#x1F4E4; 업로드</a>
-            <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비 추가</a>
-            <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산 추가</a>
+            <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비</a>
+            <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산</a>
+            <a id="downloadBtn" href="#" class="btn-add" style="background:#ff9800;" onclick="doDownload(event)">다운로드</a>
+            <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">업로드</a>
         </div>
     </form>
 
@@ -232,7 +247,7 @@
                 <td>
                     <div class="actions">
                         <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit">수정</a>
-                        <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id}, ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
+                        <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id}, ym=${b.ym}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
                            onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
                     </div>
                 </td>
@@ -243,7 +258,73 @@
 </div>
 
 <script>
+// 다운로드: 현재 폼의 필터 조건으로 다운로드
+function doDownload(e) {
+    e.preventDefault();
+    var form = document.querySelector('.filter-bar');
+    var params = new URLSearchParams(new FormData(form));
+    window.location.href = '/expenses/download?' + params.toString();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // ======== 월 체크박스 드롭다운 ========
+    var btn = document.getElementById('ymDropdownBtn');
+    var list = document.getElementById('ymDropdownList');
+    var allCb = document.getElementById('ymAll');
+    var ymCbs = document.querySelectorAll('.ym-cb');
+
+    function updateBtnText() {
+        var checked = Array.from(ymCbs).filter(function(c) { return c.checked; });
+        if (checked.length === 0 || checked.length === ymCbs.length) {
+            btn.textContent = '전체';
+            allCb.checked = true;
+        } else if (checked.length === 1) {
+            btn.textContent = checked[0].value;
+            allCb.checked = false;
+        } else {
+            btn.textContent = checked[0].value + ' 외 ' + (checked.length - 1) + '건';
+            allCb.checked = false;
+        }
+    }
+
+    // 초기 상태 설정
+    var hasSelected = Array.from(ymCbs).some(function(c) { return c.checked; });
+    if (!hasSelected) {
+        allCb.checked = true;
+    } else {
+        allCb.checked = (Array.from(ymCbs).filter(function(c) { return c.checked; }).length === ymCbs.length);
+    }
+    updateBtnText();
+
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        list.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('ymDropdown').contains(e.target)) {
+            list.classList.remove('open');
+        }
+    });
+
+    allCb.addEventListener('change', function() {
+        ymCbs.forEach(function(c) { c.checked = allCb.checked; });
+        updateBtnText();
+    });
+
+    ymCbs.forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var allChecked = Array.from(ymCbs).every(function(c) { return c.checked; });
+            var noneChecked = Array.from(ymCbs).every(function(c) { return !c.checked; });
+            allCb.checked = allChecked || noneChecked;
+            if (noneChecked) {
+                ymCbs.forEach(function(c) { c.checked = false; });
+            }
+            updateBtnText();
+        });
+    });
+
+    // ======== 정렬 ========
     function sortByCol(th, dir) {
         var table = th.closest('table');
         var tbody = table.querySelector('tbody');

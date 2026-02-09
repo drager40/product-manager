@@ -2,6 +2,7 @@ package com.bugs.productmanager.service;
 
 import com.bugs.productmanager.model.Budget;
 import com.bugs.productmanager.repository.BudgetRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,26 +19,21 @@ public class BudgetService {
     }
 
     public List<Budget> findFiltered(String ym, String category, String division) {
-        boolean hasYm = ym != null && !ym.isEmpty();
+        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, division);
+    }
+
+    public List<Budget> findFiltered(List<String> ymValues, String category, String division) {
+        Specification<Budget> spec = Specification.where(null);
+
+        if (ymValues != null && !ymValues.isEmpty()) {
+            spec = spec.and((r, q, cb) -> r.get("ym").in(ymValues));
+        }
         boolean hasCat = category != null && !category.isEmpty();
         boolean hasDiv = division != null && !division.isEmpty();
+        if (hasCat) spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
+        if (hasDiv) spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
 
-        if (hasYm && hasCat && hasDiv) {
-            Optional<Budget> b = budgetRepository.findByYmAndCategoryAndDivision(ym, category, division);
-            return b.map(List::of).orElse(List.of());
-        } else if (hasYm && hasCat) {
-            return budgetRepository.findByYmAndCategory(ym, category);
-        } else if (hasYm) {
-            return budgetRepository.findByYm(ym);
-        } else if (hasCat && hasDiv) {
-            return budgetRepository.findByCategoryAndDivision(category, division);
-        } else if (hasCat) {
-            return budgetRepository.findByCategory(category);
-        } else if (hasDiv) {
-            return budgetRepository.findByDivision(division);
-        } else {
-            return budgetRepository.findAll();
-        }
+        return budgetRepository.findAll(spec);
     }
 
     public BigDecimal calcMonthlyAmount(List<Budget> budgets) {
