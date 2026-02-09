@@ -233,33 +233,37 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function sortByCol(th, dir) {
+        var table = th.closest('table');
+        var tbody = table.querySelector('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        var col = parseInt(th.dataset.col);
+
+        table.querySelectorAll('th.sortable').forEach(function(h) {
+            h.classList.remove('asc', 'desc');
+        });
+        th.classList.add(dir);
+
+        rows.sort(function(a, b) {
+            var aText = a.cells[col].textContent.trim();
+            var bText = b.cells[col].textContent.trim();
+            var cmp = aText.localeCompare(bText, 'ko');
+            return dir === 'asc' ? cmp : -cmp;
+        });
+
+        rows.forEach(function(row) { tbody.appendChild(row); });
+    }
+
     document.querySelectorAll('th.sortable').forEach(function(th) {
         th.addEventListener('click', function() {
-            var table = th.closest('table');
-            var tbody = table.querySelector('tbody');
-            var rows = Array.from(tbody.querySelectorAll('tr'));
-            var col = parseInt(th.dataset.col);
             var isAsc = th.classList.contains('asc');
-
-            // Reset all headers in this table
-            table.querySelectorAll('th.sortable').forEach(function(h) {
-                h.classList.remove('asc', 'desc');
-            });
-
-            // Toggle direction
-            var dir = isAsc ? 'desc' : 'asc';
-            th.classList.add(dir);
-
-            rows.sort(function(a, b) {
-                var aText = a.cells[col].textContent.trim();
-                var bText = b.cells[col].textContent.trim();
-                var cmp = aText.localeCompare(bText, 'ko');
-                return dir === 'asc' ? cmp : -cmp;
-            });
-
-            rows.forEach(function(row) { tbody.appendChild(row); });
+            sortByCol(th, isAsc ? 'desc' : 'asc');
         });
     });
+
+    // 날짜 컬럼 초기 정렬: desc
+    var dateTh = document.querySelector('th.sortable[data-col="0"]');
+    if (dateTh) sortByCol(dateTh, 'desc');
 });
 </script>
 </body>
