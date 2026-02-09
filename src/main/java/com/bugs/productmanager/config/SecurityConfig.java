@@ -36,7 +36,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+    public InMemoryUserDetailsManager userDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails admin = User.builder()
                 .username("admin")
                 .password(passwordEncoder.encode("admin123"))

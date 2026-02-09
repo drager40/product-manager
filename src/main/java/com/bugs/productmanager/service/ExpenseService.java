@@ -5,7 +5,9 @@ import com.bugs.productmanager.repository.ExpenseRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ExpenseService {
@@ -73,6 +75,18 @@ public class ExpenseService {
 
     public List<String> findDistinctDivision() {
         return expenseRepository.findDistinctDivision();
+    }
+
+    /**
+     * 예산별(ym+category+division) 사용금액 합계 맵
+     */
+    public Map<String, BigDecimal> calcUsedAmountByBudgetKey(List<Expense> expenses) {
+        Map<String, BigDecimal> map = new HashMap<>();
+        for (Expense e : expenses) {
+            String key = e.getYm() + "_" + e.getCategory() + "_" + e.getDivision();
+            map.merge(key, e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO, BigDecimal::add);
+        }
+        return map;
     }
 
     /**

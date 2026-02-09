@@ -80,6 +80,7 @@
             <a href="/products" class="nav-link">상품</a>
         </div>
         <span sec:authentication="name"></span>
+        <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
         <a th:href="@{/logout}" class="btn-logout">로그아웃</a>
     </div>
 </div>
@@ -196,6 +197,7 @@
                 <th class="amount">금월 예산</th>
                 <th class="amount">전월 잔여</th>
                 <th class="amount">예산 합계</th>
+                <th class="amount">금월 잔액</th>
                 <th>관리</th>
             </tr>
             </thead>
@@ -209,6 +211,9 @@
                 <td class="amount" th:text="${#numbers.formatDecimal(b.monthlyAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.totalBudget, 0, 'COMMA', 0, 'POINT')}"></td>
+                <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}">
+                <td class="amount" th:classappend="${balance.signum() lt 0 ? ' negative' : ''}" th:text="${#numbers.formatDecimal(balance, 0, 'COMMA', 0, 'POINT')}"></td>
+                </th:block>
                 <td>
                     <div class="actions">
                         <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit">수정</a>

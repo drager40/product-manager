@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/expenses")
@@ -76,6 +77,7 @@ public class ExpenseController {
         model.addAttribute("selectedDivision", division != null ? division : "");
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("budgetList", budgets);
+        model.addAttribute("usedAmountMap", expenseService.calcUsedAmountByBudgetKey(expenses));
 
         return "expense/list";
     }
