@@ -1,6 +1,9 @@
 package com.bugs.productmanager.controller;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -59,11 +62,18 @@ public class LoginController {
             return "redirect:/change-password";
         }
 
-        // 비밀번호 변경
-        userDetailsManager.changePassword(
-                currentPassword,
-                passwordEncoder.encode(newPassword)
-        );
+        // 비밀번호 변경 - updateUser로 직접 교체
+        UserDetails updatedUser = User.builder()
+                .username(username)
+                .password(passwordEncoder.encode(newPassword))
+                .authorities(user.getAuthorities())
+                .build();
+        userDetailsManager.updateUser(updatedUser);
+
+        // SecurityContext도 새 인증정보로 갱신
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                updatedUser, updatedUser.getPassword(), updatedUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
 
         redirectAttributes.addFlashAttribute("successMsg", "비밀번호가 변경되었습니다.");
         return "redirect:/change-password";
