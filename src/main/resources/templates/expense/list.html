@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>NHN 경비 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; padding: 4px 10px; border-radius: 4px; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.2); }
+
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+
+        .filter-bar { background: white; padding: 20px 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #666; }
+        .filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 140px; }
+        .btn-filter { padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-filter:hover { background: #5a6fd6; }
+        .btn-reset { padding: 8px 16px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-group-right { display: flex; gap: 8px; margin-left: auto; }
+        .btn-add { padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-add:hover { background: #43a047; }
+
+        .summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-card { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex: 1; min-width: 150px; }
+        .summary-card .label { font-size: 11px; color: #888; margin-bottom: 4px; }
+        .summary-card .value { font-size: 18px; font-weight: 700; color: #333; }
+        .summary-card.budget-total { border-left: 4px solid #667eea; }
+        .summary-card.monthly { border-left: 4px solid #42a5f5; }
+        .summary-card.prev { border-left: 4px solid #66bb6a; }
+        .summary-card.used { border-left: 4px solid #ef5350; }
+        .summary-card.remain { border-left: 4px solid #ffa726; }
+        .summary-card.count { border-left: 4px solid #ab47bc; }
+        .value.negative { color: #ef5350; }
+
+        .budget-edit { background: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .budget-edit h3 { font-size: 14px; color: #555; margin-bottom: 12px; }
+        .budget-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .budget-form .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .budget-form label { font-size: 12px; font-weight: 600; color: #666; }
+        .budget-form input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 160px; }
+        .btn-budget { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        th { background: #333; color: white; padding: 12px 16px; text-align: left; font-size: 13px; }
+        td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        tr:hover { background: #f8f9ff; }
+        .amount { text-align: right; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-link { background: #e3f2fd; color: #1565c0; }
+        .badge-bugs { background: #fce4ec; color: #c62828; }
+        .actions { display: flex; gap: 6px; }
+        .btn-sm { padding: 4px 10px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; font-size: 12px; }
+        .btn-edit { background: #2196F3; color: white; }
+        .btn-delete { background: #f44336; color: white; }
+        .btn-sm:hover { opacity: 0.85; }
+        .empty { text-align: center; padding: 60px; color: #999; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>NHN 경비 관리</h1>
+    <div class="header-right">
+        <div class="nav-links">
+            <a href="/expenses" class="nav-link active">경비</a>
+            <a href="/products" class="nav-link">상품</a>
+        </div>
+        <span sec:authentication="name"></span>
+        <a th:href="@{/logout}" class="btn-logout">로그아웃</a>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 필터 -->
+    <form class="filter-bar" th:action="@{/expenses}" method="get">
+        <div class="filter-group">
+            <label>월</label>
+            <select name="ym">
+                <option value="">전체</option>
+                <option th:each="y : ${ymList}" th:value="${y}" th:text="${y}" th:selected="${y == selectedYm}"></option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>분류</label>
+            <select name="category">
+                <option value="">전체</option>
+                <option th:each="c : ${categoryList}" th:value="${c}" th:text="${c}" th:selected="${c == selectedCategory}"></option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>구분</label>
+            <select name="division">
+                <option value="">전체</option>
+                <option th:each="d : ${divisionList}" th:value="${d}" th:text="${d}" th:selected="${d == selectedDivision}"></option>
+            </select>
+        </div>
+        <button type="submit" class="btn-filter">조회</button>
+        <a th:href="@{/expenses}" class="btn-reset">초기화</a>
+        <div class="btn-group-right">
+            <a th:href="@{/expenses/download(ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-add" style="background:#ff9800;">&#x1F4E5; 다운로드</a>
+            <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">&#x1F4E4; 업로드</a>
+            <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비 추가</a>
+            <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산 추가</a>
+        </div>
+    </form>
+
+    <!-- 예산 요약 -->
+    <div class="summary">
+        <div class="summary-card budget-total">
+            <div class="label">예산 합계</div>
+            <div class="value" th:text="${#numbers.formatDecimal(budgetTotal, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
+        </div>
+        <div class="summary-card monthly">
+            <div class="label">금월 예산</div>
+            <div class="value" th:text="${#numbers.formatDecimal(monthlyAmount, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
+        </div>
+        <div class="summary-card prev">
+            <div class="label">전월 잔여</div>
+            <div class="value" th:text="${#numbers.formatDecimal(prevRemaining, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
+        </div>
+        <div class="summary-card used">
+            <div class="label">사용 금액</div>
+            <div class="value" th:text="${#numbers.formatDecimal(totalAmount, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
+        </div>
+        <div class="summary-card remain">
+            <div class="label">금월 남은 금액</div>
+            <div class="value" th:classappend="${remaining.signum() < 0 ? 'negative' : ''}" th:text="${#numbers.formatDecimal(remaining, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
+        </div>
+        <div class="summary-card count">
+            <div class="label">건수</div>
+            <div class="value" th:text="${totalCount} + ' 건'"></div>
+        </div>
+    </div>
+
+    <!-- 데이터 테이블 -->
+    <table th:if="${!expenses.isEmpty()}">
+        <thead>
+        <tr>
+            <th>날짜</th>
+            <th>분류</th>
+            <th>구분</th>
+            <th>용도</th>
+            <th>상호</th>
+            <th class="amount">금액</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="exp : ${expenses}">
+            <td th:text="${exp.expenseDate}"></td>
+            <td>
+                <span class="badge" th:classappend="${exp.category == 'LINK' ? 'badge-link' : 'badge-bugs'}" th:text="${exp.category}"></span>
+            </td>
+            <td th:text="${exp.division}"></td>
+            <td th:text="${exp.purpose}"></td>
+            <td th:text="${exp.storeName}"></td>
+            <td class="amount" th:text="${#numbers.formatDecimal(exp.amount, 0, 'COMMA', 0, 'POINT')}"></td>
+            <td>
+                <div class="actions">
+                    <a th:href="@{/expenses/{id}/edit(id=${exp.id})}" class="btn-sm btn-edit">수정</a>
+                    <a th:href="@{/expenses/{id}/delete(id=${exp.id}, ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
+                       onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:if="${expenses.isEmpty()}" class="empty">
+        <p>조회된 데이터가 없습니다.</p>
+    </div>
+
+    <!-- 예산 목록 -->
+    <div th:if="${!budgetList.isEmpty()}" style="margin-top: 24px;">
+        <h3 style="color: #555; margin-bottom: 12px; font-size: 15px;">예산 현황</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>년월</th>
+                <th>분류</th>
+                <th>구분</th>
+                <th class="amount">금월 예산</th>
+                <th class="amount">전월 잔여</th>
+                <th class="amount">예산 합계</th>
+                <th>관리</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="b : ${budgetList}">
+                <td th:text="${b.ym}"></td>
+                <td>
+                    <span class="badge" th:classappend="${b.category == 'LINK' ? 'badge-link' : 'badge-bugs'}" th:text="${b.category}"></span>
+                </td>
+                <td th:text="${b.division}"></td>
+                <td class="amount" th:text="${#numbers.formatDecimal(b.monthlyAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                <td class="amount" th:text="${#numbers.formatDecimal(b.prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
+                <td class="amount" th:text="${#numbers.formatDecimal(b.totalBudget, 0, 'COMMA', 0, 'POINT')}"></td>
+                <td>
+                    <div class="actions">
+                        <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit">수정</a>
+                        <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id}, ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
+                           onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
