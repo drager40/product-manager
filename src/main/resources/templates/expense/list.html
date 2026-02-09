@@ -138,7 +138,7 @@
             <div class="value" th:text="${#numbers.formatDecimal(totalAmount, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
         </div>
         <div class="summary-card remain">
-            <div class="label">금월 남은 금액</div>
+            <div class="label">금월 잔액</div>
             <div class="value" th:classappend="${remaining.signum() < 0 ? 'negative' : ''}" th:text="${#numbers.formatDecimal(remaining, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
         </div>
         <div class="summary-card count">
@@ -197,6 +197,7 @@
                 <th class="amount">금월 예산</th>
                 <th class="amount">전월 잔여</th>
                 <th class="amount">예산 합계</th>
+                <th class="amount">사용금액</th>
                 <th class="amount">금월 잔액</th>
                 <th>관리</th>
             </tr>
@@ -212,6 +213,7 @@
                 <td class="amount" th:text="${#numbers.formatDecimal(b.prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.totalBudget, 0, 'COMMA', 0, 'POINT')}"></td>
                 <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}">
+                <td class="amount" th:text="${#numbers.formatDecimal(used, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:classappend="${balance.signum() lt 0 ? ' negative' : ''}" th:text="${#numbers.formatDecimal(balance, 0, 'COMMA', 0, 'POINT')}"></td>
                 </th:block>
                 <td>
