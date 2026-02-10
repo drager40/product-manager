@@ -17,8 +17,9 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.*;;
 
 @Controller
 @RequestMapping("/expenses")
@@ -40,7 +41,7 @@ public class ExpenseController {
     public String list(
             @RequestParam(required = false) List<String> ym,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String division,
+            @RequestParam(required = false) List<String> division,
             @RequestParam(required = false, defaultValue = "storeName") String searchType,
             @RequestParam(required = false) String searchKeyword,
             Authentication auth,
@@ -59,18 +60,19 @@ public class ExpenseController {
 
         // 빈 값 제거
         List<String> ymValues = ym != null ? ym.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
+        List<String> divValues = division != null ? division.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
 
         List<String> ymList = expenseService.findDistinctYm();
         List<String> categoryList = expenseService.findDistinctCategory();
         List<String> divisionList = expenseService.findDistinctDivision();
 
         // 필터 없으면 최신 월로 기본 설정
-        ymValues = expenseService.resolveDefaultYmList(ymValues, category, division, purpose, storeName);
+        ymValues = expenseService.resolveDefaultYmList(ymValues, category, divValues, purpose, storeName);
 
-        List<Expense> expenses = expenseService.findFiltered(ymValues, category, division, purpose, storeName);
+        List<Expense> expenses = expenseService.findFiltered(ymValues, category, divValues, purpose, storeName);
         BigDecimal totalAmount = expenseService.calcTotalAmount(expenses);
 
-        List<Budget> budgets = budgetService.findFiltered(ymValues, category, division);
+        List<Budget> budgets = budgetService.findFiltered(ymValues, category, divValues);
         BigDecimal monthlyAmount = budgetService.calcMonthlyAmount(budgets);
         BigDecimal prevRemaining = budgetService.calcPrevRemaining(budgets);
         BigDecimal budgetTotal = monthlyAmount.add(prevRemaining);
@@ -90,12 +92,38 @@ public class ExpenseController {
         model.addAttribute("divisionList", divisionList);
         model.addAttribute("selectedYmList", ymValues);
         model.addAttribute("selectedCategory", category != null ? category : "");
-        model.addAttribute("selectedDivision", division != null ? division : "");
+        model.addAttribute("selectedDivisionList", divValues);
         model.addAttribute("selectedSearchType", searchType != null ? searchType : "storeName");
         model.addAttribute("selectedSearchKeyword", searchKeyword != null ? searchKeyword : "");
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("budgetList", budgets);
         model.addAttribute("usedAmountMap", expenseService.calcUsedAmountByBudgetKey(expenses));
+
+        // 차트 데이터: 최근 1년치 고정 (현재월 기준 12개월 전 ~ 현재월)
+        YearMonth now = YearMonth.now();
+        YearMonth start = now.minusMonths(12);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        List<String> chartYmList = new ArrayList<>();
+        for (YearMonth m = start; !m.isAfter(now); m = m.plusMonths(1)) {
+            chartYmList.add(m.format(fmt));
+        }
+        List<Expense> chartExpenses = expenseService.findFiltered(chartYmList, category, divValues, purpose, storeName);
+        Map<String, BigDecimal> chartUsedData = expenseService.calcAmountByYm(chartExpenses);
+        List<Budget> chartBudgets = budgetService.findFiltered(chartYmList, category, divValues);
+        Map<String, BigDecimal> chartBudgetData = budgetService.calcBudgetTotalByYm(chartBudgets);
+        List<String> chartLabels = new ArrayList<>();
+        List<BigDecimal> chartUsedValues = new ArrayList<>();
+        List<BigDecimal> chartRemainValues = new ArrayList<>();
+        for (String ym2 : chartYmList) {
+            chartLabels.add(ym2);
+            BigDecimal used = chartUsedData.getOrDefault(ym2, BigDecimal.ZERO);
+            BigDecimal budgetAmt = chartBudgetData.getOrDefault(ym2, BigDecimal.ZERO);
+            chartUsedValues.add(used);
+            chartRemainValues.add(budgetAmt.subtract(used));
+        }
+        model.addAttribute("chartLabels", chartLabels);
+        model.addAttribute("chartUsedValues", chartUsedValues);
+        model.addAttribute("chartRemainValues", chartRemainValues);
 
         return "expense/list";
     }
@@ -201,7 +229,7 @@ public class ExpenseController {
     public void downloadExcel(
             @RequestParam(required = false) List<String> ym,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String division,
+            @RequestParam(required = false) List<String> division,
             @RequestParam(required = false, defaultValue = "storeName") String searchType,
             @RequestParam(required = false) String searchKeyword,
             HttpServletResponse response) throws IOException {
@@ -216,8 +244,9 @@ public class ExpenseController {
             }
         }
         List<String> ymValues = ym != null ? ym.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
-        List<Expense> expenses = expenseService.findFiltered(ymValues, category, division, purpose, storeName);
-        List<Budget> budgets = budgetService.findFiltered(ymValues, category, division);
+        List<String> divValues = division != null ? division.stream().filter(s -> s != null && !s.isEmpty()).toList() : List.of();
+        List<Expense> expenses = expenseService.findFiltered(ymValues, category, divValues, purpose, storeName);
+        List<Budget> budgets = budgetService.findFiltered(ymValues, category, divValues);
 
         boolean hasYm = !ymValues.isEmpty();
         boolean hasCat = category != null && !category.isEmpty();

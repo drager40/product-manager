@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>NHN 경비 관리</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
@@ -25,7 +26,7 @@
         .filter-group select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 110px; height: 34px; }
 
         .ym-dropdown { position: relative; }
-        .ym-dropdown-btn { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 140px; height: 34px; background: white; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        .ym-dropdown-btn { padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 110px; height: 34px; background: white; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; }
         .ym-dropdown-btn::after { content: '\25BC'; font-size: 9px; color: #999; margin-left: 8px; }
         .ym-dropdown-list { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 100; min-width: 160px; max-height: 280px; overflow-y: auto; margin-top: 2px; }
         .ym-dropdown-list.open { display: block; }
@@ -59,6 +60,8 @@
         .budget-form label { font-size: 12px; font-weight: 600; color: #666; }
         .budget-form input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 160px; }
         .btn-budget { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; max-height: 300px; }
 
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         th { background: #333; color: white; padding: 12px 16px; text-align: left; font-size: 13px; }
@@ -122,10 +125,15 @@
         </div>
         <div class="filter-group">
             <label>구분</label>
-            <select name="division">
-                <option value="">전체</option>
-                <option th:each="d : ${divisionList}" th:value="${d}" th:text="${d}" th:selected="${d == selectedDivision}"></option>
-            </select>
+            <div class="ym-dropdown" id="divDropdown">
+                <button type="button" class="ym-dropdown-btn" id="divDropdownBtn">전체</button>
+                <div class="ym-dropdown-list" id="divDropdownList">
+                    <label class="all-label"><input type="checkbox" id="divAll" checked> 전체</label>
+                    <th:block th:each="d : ${divisionList}">
+                        <label><input type="checkbox" name="division" th:value="${d}" th:checked="${selectedDivisionList.contains(d)}" class="div-cb"> <span th:text="${d}"></span></label>
+                    </th:block>
+                </div>
+            </div>
         </div>
         <div class="filter-group">
             <label>상세조건</label>
@@ -173,6 +181,11 @@
             <div class="label">건수</div>
             <div class="value" th:text="${totalCount} + ' 건'"></div>
         </div>
+    </div>
+
+    <!-- 월별 사용금액 차트 -->
+    <div class="chart-container" th:if="${chartLabels.size() > 0}">
+        <canvas id="monthlyChart"></canvas>
     </div>
 
     <!-- 데이터 테이블 -->
@@ -299,11 +312,15 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function(e) {
         e.stopPropagation();
         list.classList.toggle('open');
+        divList.classList.remove('open');
     });
 
     document.addEventListener('click', function(e) {
         if (!document.getElementById('ymDropdown').contains(e.target)) {
             list.classList.remove('open');
+        }
+        if (!document.getElementById('divDropdown').contains(e.target)) {
+            divList.classList.remove('open');
         }
     });
 
@@ -321,6 +338,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 ymCbs.forEach(function(c) { c.checked = false; });
             }
             updateBtnText();
+        });
+    });
+
+    // ======== 구분 체크박스 드롭다운 ========
+    var divBtn = document.getElementById('divDropdownBtn');
+    var divList = document.getElementById('divDropdownList');
+    var divAll = document.getElementById('divAll');
+    var divCbs = document.querySelectorAll('.div-cb');
+
+    function updateDivBtnText() {
+        var checked = Array.from(divCbs).filter(function(c) { return c.checked; });
+        if (checked.length === 0 || checked.length === divCbs.length) {
+            divBtn.textContent = '전체';
+            divAll.checked = true;
+        } else if (checked.length === 1) {
+            divBtn.textContent = checked[0].value;
+            divAll.checked = false;
+        } else {
+            divBtn.textContent = checked[0].value + ' 외 ' + (checked.length - 1) + '건';
+            divAll.checked = false;
+        }
+    }
+
+    var divHasSelected = Array.from(divCbs).some(function(c) { return c.checked; });
+    if (!divHasSelected) {
+        divAll.checked = true;
+    } else {
+        divAll.checked = (Array.from(divCbs).filter(function(c) { return c.checked; }).length === divCbs.length);
+    }
+    updateDivBtnText();
+
+    divBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        divList.classList.toggle('open');
+        list.classList.remove('open');
+    });
+
+    divAll.addEventListener('change', function() {
+        divCbs.forEach(function(c) { c.checked = divAll.checked; });
+        updateDivBtnText();
+    });
+
+    divCbs.forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var allChecked = Array.from(divCbs).every(function(c) { return c.checked; });
+            var noneChecked = Array.from(divCbs).every(function(c) { return !c.checked; });
+            divAll.checked = allChecked || noneChecked;
+            if (noneChecked) {
+                divCbs.forEach(function(c) { c.checked = false; });
+            }
+            updateDivBtnText();
         });
     });
 
@@ -357,6 +425,87 @@ document.addEventListener('DOMContentLoaded', function() {
     var dateTh = document.querySelector('th.sortable[data-col="0"]');
     if (dateTh) sortByCol(dateTh, 'desc');
 });
+</script>
+<script th:inline="javascript">
+// ======== 월별 사용금액/잔여금액 차트 ========
+(function() {
+    var chartEl = document.getElementById('monthlyChart');
+    if (!chartEl) return;
+    var labels = /*[[${chartLabels}]]*/ [];
+    var usedValues = /*[[${chartUsedValues}]]*/ [];
+    var remainValues = /*[[${chartRemainValues}]]*/ [];
+    var selectedYmList = /*[[${selectedYmList}]]*/ [];
+    var usedBg = labels.map(function(lbl) {
+        return selectedYmList.indexOf(lbl) >= 0 ? '#ef5350' : '#f5b7b7';
+    });
+    var remainBg = labels.map(function(lbl) {
+        return selectedYmList.indexOf(lbl) >= 0 ? '#66bb6a' : '#c0e6c2';
+    });
+    new Chart(chartEl, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '사용금액',
+                    data: usedValues,
+                    backgroundColor: usedBg,
+                    borderRadius: 4,
+                    maxBarThickness: 40
+                },
+                {
+                    label: '잔여금액',
+                    data: remainValues,
+                    backgroundColor: remainBg,
+                    borderRadius: 4,
+                    maxBarThickness: 40
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { font: { family: 'Pretendard', size: 12 }, usePointStyle: true, pointStyle: 'rectRounded', padding: 16 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ko-KR') + ' 원';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(v) { return v.toLocaleString('ko-KR'); },
+                        font: { family: 'Pretendard', size: 11 }
+                    },
+                    grid: { color: '#f0f0f0' }
+                },
+                x: {
+                    ticks: {
+                        font: function(ctx) {
+                            var lbl = labels[ctx.index];
+                            var isSel = selectedYmList.indexOf(lbl) >= 0;
+                            return { family: 'Pretendard', size: isSel ? 13 : 11, weight: isSel ? 'bold' : 'normal' };
+                        },
+                        color: function(ctx) {
+                            var lbl = labels[ctx.index];
+                            return selectedYmList.indexOf(lbl) >= 0 ? '#333' : '#999';
+                        }
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+})();
 </script>
 </body>
 </html>

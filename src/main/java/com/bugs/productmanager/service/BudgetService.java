@@ -6,7 +6,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -19,19 +21,21 @@ public class BudgetService {
     }
 
     public List<Budget> findFiltered(String ym, String category, String division) {
-        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, division);
+        List<String> divList = (division != null && !division.isEmpty()) ? List.of(division) : List.of();
+        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, divList);
     }
 
-    public List<Budget> findFiltered(List<String> ymValues, String category, String division) {
+    public List<Budget> findFiltered(List<String> ymValues, String category, List<String> divValues) {
         Specification<Budget> spec = Specification.where(null);
 
         if (ymValues != null && !ymValues.isEmpty()) {
             spec = spec.and((r, q, cb) -> r.get("ym").in(ymValues));
         }
         boolean hasCat = category != null && !category.isEmpty();
-        boolean hasDiv = division != null && !division.isEmpty();
         if (hasCat) spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
-        if (hasDiv) spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
+        if (divValues != null && !divValues.isEmpty()) {
+            spec = spec.and((r, q, cb) -> r.get("division").in(divValues));
+        }
 
         return budgetRepository.findAll(spec);
     }
@@ -80,6 +84,19 @@ public class BudgetService {
             }
         }
         return budgetRepository.save(budget);
+    }
+
+    /**
+     * 월별 예산 합계 맵 (차트용): monthlyAmount + prevRemaining
+     */
+    public Map<String, BigDecimal> calcBudgetTotalByYm(List<Budget> budgets) {
+        Map<String, BigDecimal> map = new LinkedHashMap<>();
+        for (Budget b : budgets) {
+            BigDecimal total = (b.getMonthlyAmount() != null ? b.getMonthlyAmount() : BigDecimal.ZERO)
+                    .add(b.getPrevRemaining() != null ? b.getPrevRemaining() : BigDecimal.ZERO);
+            map.merge(b.getYm(), total, BigDecimal::add);
+        }
+        return map;
     }
 
     public void deleteById(Long id) {

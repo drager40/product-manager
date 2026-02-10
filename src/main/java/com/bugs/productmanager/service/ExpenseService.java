@@ -22,17 +22,20 @@ public class ExpenseService {
     }
 
     public List<Expense> findFiltered(String ym, String category, String division) {
-        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, division, null, null);
+        List<String> divList = (division != null && !division.isEmpty()) ? List.of(division) : List.of();
+        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, divList, null, null);
     }
 
-    public List<Expense> findFiltered(List<String> ymValues, String category, String division, String purpose, String storeName) {
+    public List<Expense> findFiltered(List<String> ymValues, String category, List<String> divValues, String purpose, String storeName) {
         Specification<Expense> spec = Specification.where(null);
 
         if (ymValues != null && !ymValues.isEmpty()) {
             spec = spec.and((r, q, cb) -> r.get("ym").in(ymValues));
         }
         if (hasValue(category))  spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
-        if (hasValue(division))  spec = spec.and((r, q, cb) -> cb.equal(r.get("division"), division));
+        if (divValues != null && !divValues.isEmpty()) {
+            spec = spec.and((r, q, cb) -> r.get("division").in(divValues));
+        }
         if (hasValue(purpose))   spec = spec.and((r, q, cb) -> cb.like(r.get("purpose"), "%" + purpose + "%"));
         if (hasValue(storeName)) spec = spec.and((r, q, cb) -> cb.like(r.get("storeName"), "%" + storeName + "%"));
 
@@ -87,6 +90,18 @@ public class ExpenseService {
     }
 
     /**
+     * 월별 사용금액 합계 맵 (차트용)
+     */
+    public Map<String, BigDecimal> calcAmountByYm(List<Expense> expenses) {
+        Map<String, BigDecimal> map = new java.util.LinkedHashMap<>();
+        for (Expense e : expenses) {
+            String ym = e.getYm();
+            map.merge(ym, e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO, BigDecimal::add);
+        }
+        return map;
+    }
+
+    /**
      * 예산별(ym+category+division) 사용금액 합계 맵
      */
     public Map<String, BigDecimal> calcUsedAmountByBudgetKey(List<Expense> expenses) {
@@ -101,9 +116,10 @@ public class ExpenseService {
     /**
      * ym 필터가 없을 때 기본 ym 결정 (최신 월)
      */
-    public List<String> resolveDefaultYmList(List<String> ymValues, String category, String division, String purpose, String storeName) {
+    public List<String> resolveDefaultYmList(List<String> ymValues, String category, List<String> divValues, String purpose, String storeName) {
         boolean hasYm = ymValues != null && !ymValues.isEmpty();
-        if (!hasYm && !hasValue(category) && !hasValue(division) && !hasValue(purpose) && !hasValue(storeName)) {
+        boolean hasDiv = divValues != null && !divValues.isEmpty();
+        if (!hasYm && !hasValue(category) && !hasDiv && !hasValue(purpose) && !hasValue(storeName)) {
             List<String> ymList = findDistinctYm();
             if (!ymList.isEmpty()) {
                 return List.of(ymList.get(0));
