@@ -23,6 +23,23 @@
         .btn-cancel { background: #999; color: white; }
         .btn:hover { opacity: 0.85; }
         .btn-group { display: flex; gap: 12px; margin-top: 24px; }
+
+        /* SMS 분석 섹션 */
+        .sms-section { background: #f8f9ff; border: 1px solid #e0e3ff; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+        .sms-header { font-size: 14px; color: #555; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+        .sms-header::after { content: '\25BC'; font-size: 10px; color: #999; transition: transform 0.2s; }
+        .sms-header.collapsed::after { transform: rotate(-90deg); }
+        .sms-body { margin-top: 12px; }
+        .sms-body.hidden { display: none; }
+        .sms-textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: 'Pretendard', sans-serif; resize: vertical; min-height: 80px; line-height: 1.5; }
+        .sms-textarea:focus { outline: none; border-color: #667eea; }
+        .sms-textarea::placeholder { color: #bbb; font-size: 12px; }
+        .btn-parse { margin-top: 8px; padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; }
+        .btn-parse:hover { background: #5a6fd6; }
+        .sms-result { margin-top: 10px; padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.6; display: none; }
+        .sms-result.success { display: block; background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+        .sms-result.warning { display: block; background: #fff3e0; border: 1px solid #ffcc80; color: #e65100; }
+        .sms-result.error { display: block; background: #ffebee; border: 1px solid #ef9a9a; color: #c62828; }
     </style>
 </head>
 <body>
@@ -32,6 +49,17 @@
 <div class="container">
     <h2 th:text="${expense.id != null ? '경비 수정' : '경비 등록'}"></h2>
     <div class="form-card">
+
+        <!-- SMS 문자 분석 (신규 등록일 때만) -->
+        <div class="sms-section" th:if="${expense.id == null}">
+            <div class="sms-header" id="smsToggle">&#128241; 결제 문자 붙여넣기</div>
+            <div class="sms-body" id="smsBody">
+                <textarea class="sms-textarea" id="smsText" placeholder="결제 문자를 붙여넣기 하세요&#10;&#10;예시:&#10;[MY COMPANY] 승인&#10;2607 조용호님&#10;27,820원 일시불&#10;스타벅스코리아&#10;잔여한도2,572,180원"></textarea>
+                <button type="button" class="btn-parse" id="btnParse">문자 분석</button>
+                <div class="sms-result" id="smsResult"></div>
+            </div>
+        </div>
+
         <form th:action="@{/expenses}" th:object="${expense}" method="post">
             <input type="hidden" th:field="*{id}"/>
 
@@ -89,5 +117,209 @@
         </form>
     </div>
 </div>
+
+<script>
+(function() {
+    // ======== 카드번호 → 분류/구분 매핑 ========
+    var CARD_MAP = {
+        '6708': { category: 'LINK' },
+        '3704': { category: 'BUGS' },
+        '2607': { category: 'LINK', division: '임원' }
+    };
+
+    // ======== SMS 섹션 토글 ========
+    var toggle = document.getElementById('smsToggle');
+    var body = document.getElementById('smsBody');
+    if (toggle && body) {
+        toggle.addEventListener('click', function() {
+            toggle.classList.toggle('collapsed');
+            body.classList.toggle('hidden');
+        });
+    }
+
+    // ======== 문자 분석 버튼 ========
+    var btnParse = document.getElementById('btnParse');
+    if (btnParse) {
+        btnParse.addEventListener('click', function() {
+            var text = document.getElementById('smsText').value.trim();
+            if (!text) {
+                showResult('error', '문자 내용을 입력해주세요.');
+                return;
+            }
+            var parsed = parseSms(text);
+            applyToForm(parsed);
+        });
+    }
+
+    // ======== SMS 파싱 ========
+    function parseSms(text) {
+        var result = { amount: null, storeName: null, cardNo: null, date: null };
+        var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+
+        var amountLineIdx = -1;
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+
+            // 잔여한도 라인 스킵
+            if (line.indexOf('잔여') >= 0) continue;
+
+            // 카드번호 추출: 줄 시작이 4자리 숫자 + 공백
+            if (!result.cardNo) {
+                var cardMatch = line.match(/^(\d{4})\s/);
+                if (cardMatch) {
+                    result.cardNo = cardMatch[1];
+                }
+            }
+
+            // 금액 추출: 숫자,숫자원 패턴
+            if (!result.amount) {
+                var amountMatch = line.match(/([\d,]+)\s*원/);
+                if (amountMatch) {
+                    result.amount = amountMatch[1].replace(/,/g, '');
+                    amountLineIdx = i;
+                }
+            }
+
+            // 날짜 추출: MM/DD 또는 MM.DD 패턴
+            if (!result.date) {
+                var dateMatch = line.match(/(\d{1,2})[\/.](\d{1,2})/);
+                if (dateMatch) {
+                    var mm = dateMatch[1].padStart(2, '0');
+                    var dd = dateMatch[2].padStart(2, '0');
+                    var year = resolveYear(parseInt(mm));
+                    result.date = { year: year, month: mm, day: dd };
+                }
+            }
+        }
+
+        // 상호명 추출: 금액 라인 다음 줄 (잔여한도 제외)
+        if (amountLineIdx >= 0) {
+            for (var j = amountLineIdx + 1; j < lines.length; j++) {
+                var nextLine = lines[j];
+                if (nextLine.indexOf('잔여') >= 0) continue;
+                if (nextLine.length > 0) {
+                    result.storeName = nextLine;
+                    break;
+                }
+            }
+        }
+
+        // 상호명이 못 잡혔으면 금액 라인 이전에서 찾기
+        if (!result.storeName && amountLineIdx > 0) {
+            for (var k = amountLineIdx - 1; k >= 0; k--) {
+                var prevLine = lines[k];
+                if (prevLine.indexOf('승인') >= 0) continue;
+                if (prevLine.indexOf('잔여') >= 0) continue;
+                if (prevLine.match(/^\d{4}\s/)) continue;
+                if (prevLine.match(/^\[.*\]/)) continue;
+                if (prevLine.length > 0) {
+                    result.storeName = prevLine;
+                    break;
+                }
+            }
+        }
+
+        // 날짜 없으면 오늘 날짜
+        if (!result.date) {
+            var now = new Date();
+            result.date = {
+                year: now.getFullYear(),
+                month: String(now.getMonth() + 1).padStart(2, '0'),
+                day: String(now.getDate()).padStart(2, '0')
+            };
+        }
+
+        return result;
+    }
+
+    function resolveYear(month) {
+        var now = new Date();
+        var currentMonth = now.getMonth() + 1;
+        var currentYear = now.getFullYear();
+        if (month > currentMonth + 1) {
+            return currentYear - 1;
+        }
+        return currentYear;
+    }
+
+    // ======== 폼에 적용 ========
+    function applyToForm(parsed) {
+        var messages = [];
+        var warnings = [];
+
+        // 금액
+        if (parsed.amount) {
+            setField('amount', parsed.amount);
+            messages.push('금액: ' + parseInt(parsed.amount).toLocaleString('ko-KR') + '원');
+        } else {
+            warnings.push('금액을 추출할 수 없습니다');
+        }
+
+        // 상호명
+        if (parsed.storeName) {
+            setField('storeName', parsed.storeName);
+            messages.push('상호: ' + parsed.storeName);
+        } else {
+            warnings.push('상호명을 추출할 수 없습니다');
+        }
+
+        // 날짜 & 년월
+        if (parsed.date) {
+            var dateStr = parsed.date.year + '-' + parsed.date.month + '-' + parsed.date.day;
+            var ymStr = parsed.date.year + '-' + parsed.date.month;
+            setField('expenseDate', dateStr);
+            setField('ym', ymStr);
+            messages.push('날짜: ' + dateStr);
+        }
+
+        // 카드번호 → 분류/구분 매핑
+        if (parsed.cardNo && CARD_MAP[parsed.cardNo]) {
+            var mapping = CARD_MAP[parsed.cardNo];
+            if (mapping.category) {
+                setSelect('category', mapping.category);
+                messages.push('분류: ' + mapping.category + ' (카드 ' + parsed.cardNo + ')');
+            }
+            if (mapping.division) {
+                setSelect('division', mapping.division);
+                messages.push('구분: ' + mapping.division);
+            }
+        } else if (parsed.cardNo) {
+            warnings.push('카드 ' + parsed.cardNo + ': 매핑 정보 없음 (분류를 직접 선택하세요)');
+        }
+
+        // 결과 메시지
+        var html = '';
+        if (messages.length > 0) {
+            html += '<strong>자동 입력 완료</strong><br/>' + messages.join('<br/>');
+        }
+        if (warnings.length > 0) {
+            html += (html ? '<br/><br/>' : '');
+            html += warnings.join('<br/>');
+        }
+
+        var type = warnings.length > 0 ? (messages.length > 0 ? 'warning' : 'error') : 'success';
+        showResult(type, html);
+    }
+
+    function setField(name, value) {
+        var el = document.querySelector('input[name="' + name + '"]');
+        if (el) el.value = value;
+    }
+
+    function setSelect(name, value) {
+        var el = document.querySelector('select[name="' + name + '"]');
+        if (el) el.value = value;
+    }
+
+    function showResult(type, msg) {
+        var el = document.getElementById('smsResult');
+        if (el) {
+            el.className = 'sms-result ' + type;
+            el.innerHTML = msg;
+        }
+    }
+})();
+</script>
 </body>
 </html>
