@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>NHN 경비 관리 - 사용자 등록</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; padding: 4px 10px; border-radius: 4px; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.2); }
+
+        .container { max-width: 600px; margin: 24px auto; padding: 0 20px; }
+        .page-title { font-size: 18px; color: #333; font-weight: 700; margin-bottom: 20px; }
+
+        .msg { padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+        .msg-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+
+        .form-card { background: white; padding: 28px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+        .form-group .hint { font-size: 11px; color: #999; margin-top: 4px; }
+
+        .checkbox-group { display: flex; align-items: center; gap: 8px; }
+        .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; accent-color: #667eea; }
+        .checkbox-group label { margin-bottom: 0; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 24px; }
+        .btn-save { padding: 10px 28px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit; }
+        .btn-save:hover { background: #5a6fd6; }
+        .btn-cancel { padding: 10px 28px; background: #999; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; }
+        .btn-cancel:hover { background: #777; }
+
+        .theme-toggle { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .theme-toggle:hover { background: rgba(255,255,255,0.3); }
+
+        body.dark { background: #1a1a2e; color: #e0e0e0; }
+        body.dark .page-title { color: #e0e0e0; }
+        body.dark .form-card { background: #16213e; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark .form-group label { color: #ccc; }
+        body.dark .form-group input, body.dark .form-group select { background: #0f3460; color: #e0e0e0; border-color: #333; }
+        body.dark .form-group .hint { color: #777; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1><a href="/" style="color:white; text-decoration:none;">NHN 경비 관리</a></h1>
+    <div class="header-right">
+        <div class="nav-links">
+            <a href="/" class="nav-link">대시보드</a>
+            <a href="/expenses" class="nav-link">경비</a>
+            <a href="/monitor" class="nav-link" sec:authorize="hasRole('ADMIN')">모니터링</a>
+            <a href="/admin/users" class="nav-link active" sec:authorize="hasRole('ADMIN')">사용자</a>
+        </div>
+        <span sec:authentication="name"></span>
+        <button class="theme-toggle" onclick="toggleDarkMode()" id="themeBtn">&#127769;</button>
+        <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
+        <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
+            <button type="submit" class="btn-logout">로그아웃</button>
+        </form>
+    </div>
+</div>
+
+<div class="container">
+    <div class="page-title" th:text="${isNew ? '사용자 추가' : '사용자 수정'}"></div>
+
+    <div th:if="${errorMsg}" class="msg msg-error" th:text="${errorMsg}"></div>
+
+    <div class="form-card">
+        <form th:action="@{/admin/users}" th:object="${user}" method="post">
+            <input type="hidden" th:field="*{id}"/>
+
+            <div class="form-group">
+                <label>아이디</label>
+                <input type="text" th:field="*{username}" required placeholder="아이디 입력"
+                       th:readonly="${!isNew}"/>
+                <div class="hint" th:if="${isNew}">영문, 숫자 조합 권장</div>
+            </div>
+
+            <div class="form-group">
+                <label th:text="${isNew ? '비밀번호' : '비밀번호 (변경 시에만 입력)'}"></label>
+                <input type="password" name="rawPassword" placeholder="비밀번호 입력"
+                       th:required="${isNew}"/>
+                <div class="hint" th:if="${!isNew}">비워두면 기존 비밀번호가 유지됩니다</div>
+            </div>
+
+            <div class="form-group">
+                <label>역할</label>
+                <select th:field="*{role}">
+                    <option value="ROLE_USER">USER</option>
+                    <option value="ROLE_ADMIN">ADMIN</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" th:field="*{enabled}" id="enabledCb"/>
+                    <label for="enabledCb" style="font-size:14px;">계정 활성화</label>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn-save">저장</button>
+                <a href="/admin/users" class="btn-cancel">취소</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleDarkMode() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    document.getElementById('themeBtn').textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+(function() {
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.getElementById('themeBtn').textContent = '\u2600\uFE0F';
+    }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>NHN 경비 관리 - 시스템 모니터링</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; padding: 4px 10px; border-radius: 4px; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.2); }
+
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+        .page-title { font-size: 18px; color: #333; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.3s; }
+        .card .card-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+        .card .card-value { font-size: 22px; font-weight: 700; color: #333; transition: color 0.3s; }
+        .card .card-sub { font-size: 12px; color: #999; margin-top: 4px; }
+        .card.primary { border-top: 4px solid #667eea; }
+        .card.success { border-top: 4px solid #66bb6a; }
+        .card.info { border-top: 4px solid #42a5f5; }
+        .card.purple { border-top: 4px solid #ab47bc; }
+
+        .heap-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .heap-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease, background 0.5s ease; }
+
+        .section { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 24px; }
+        .section h3 { font-size: 15px; color: #333; margin-bottom: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 10px 14px; text-align: left; font-size: 12px; color: #666; font-weight: 700; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #333; transition: all 0.3s; }
+        tr:hover { background: #f8f9ff; }
+        .amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .badge-name { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #e8eaf6; color: #3f51b5; }
+
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .info-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-item .label { font-size: 13px; color: #888; }
+        .info-item .val { font-size: 13px; font-weight: 600; color: #333; }
+
+        .btn-refresh { background: #667eea; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-refresh:hover { background: #5a6fd6; }
+
+        .refresh-controls { display: flex; align-items: center; gap: 10px; }
+        .refresh-select { padding: 7px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; cursor: pointer; background: white; }
+        .refresh-status { font-size: 12px; color: #888; min-width: 80px; text-align: right; }
+        .refresh-status.active { color: #66bb6a; font-weight: 600; }
+        body.dark .refresh-select { background: #0f3460; color: #e0e0e0; border-color: #333; }
+
+        .theme-toggle { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .theme-toggle:hover { background: rgba(255,255,255,0.3); }
+
+        .updated-flash { animation: flash 0.5s ease; }
+        @keyframes flash { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        body.dark { background: #1a1a2e; color: #e0e0e0; }
+        body.dark .card, body.dark .section { background: #16213e; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark .card .card-label { color: #999; }
+        body.dark .card .card-value { color: #e0e0e0; }
+        body.dark .card .card-sub { color: #777; }
+        body.dark .page-title { color: #e0e0e0; }
+        body.dark .section h3 { color: #e0e0e0; }
+        body.dark table th { background: #0f3460; color: #e0e0e0; }
+        body.dark table td { color: #e0e0e0; border-bottom-color: #1a1a3e; }
+        body.dark tr:hover { background: #1a1a3e; }
+        body.dark .info-item .label { color: #999; }
+        body.dark .info-item .val { color: #e0e0e0; }
+        body.dark .info-item { border-bottom-color: #1a1a3e; }
+
+        @media (max-width: 768px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .info-grid { grid-template-columns: 1fr; }
+            .header { padding: 12px 16px; flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1><a href="/" style="color:white; text-decoration:none;">NHN 경비 관리</a></h1>
+    <div class="header-right">
+        <div class="nav-links">
+            <a href="/" class="nav-link">대시보드</a>
+            <a href="/expenses" class="nav-link">경비</a>
+            <a href="/monitor" class="nav-link active">모니터링</a>
+            <a href="/admin/users" class="nav-link" sec:authorize="hasRole('ADMIN')">사용자</a>
+        </div>
+        <span sec:authentication="name"></span>
+        <button class="theme-toggle" onclick="toggleDarkMode()" id="themeBtn">&#127769;</button>
+        <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
+        <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
+            <button type="submit" class="btn-logout">로그아웃</button>
+        </form>
+    </div>
+</div>
+
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div class="page-title">&#128202; 시스템 모니터링</div>
+        <div class="refresh-controls">
+            <span class="refresh-status" id="refreshStatus"></span>
+            <select class="refresh-select" id="refreshInterval" onchange="changeInterval()">
+                <option value="0">수동</option>
+                <option value="10">10초</option>
+                <option value="20">20초</option>
+                <option value="30" selected>30초</option>
+                <option value="60">1분</option>
+            </select>
+            <button class="btn-refresh" onclick="fetchData()">&#8635; 새로고침</button>
+        </div>
+    </div>
+
+    <!-- 서버 상태 카드 -->
+    <div class="cards">
+        <div class="card primary">
+            <div class="card-label">JVM Heap 메모리</div>
+            <div class="card-value" id="v-heapUsed" th:text="${heapUsed}"></div>
+            <div class="card-sub">최대: <span id="v-heapMax" th:text="${heapMax}"></span></div>
+            <div class="heap-bar">
+                <div class="heap-fill" id="v-heapBar" th:style="'width:' + ${heapPercent} + '%; background:' + ${heapPercent >= 80 ? '#ef5350' : (heapPercent >= 60 ? '#ff9800' : '#66bb6a')}"></div>
+            </div>
+            <div class="card-sub" id="v-heapPercent" th:text="${heapPercent} + '%'"></div>
+        </div>
+        <div class="card success">
+            <div class="card-label">캐시 적중률</div>
+            <div class="card-value" id="v-hitRate" th:text="${totalHitRate}"></div>
+            <div class="card-sub">Hit: <span id="v-hits" th:text="${totalHits}"></span> / Miss: <span id="v-misses" th:text="${totalMisses}"></span></div>
+        </div>
+        <div class="card info">
+            <div class="card-label">서버 가동시간</div>
+            <div class="card-value" id="v-uptime" th:text="${uptime}"></div>
+            <div class="card-sub">총 요청: <span id="v-requests" th:text="${totalRequests}"></span>건</div>
+        </div>
+        <div class="card purple">
+            <div class="card-label">활성 스레드</div>
+            <div class="card-value" id="v-threads" th:text="${threadCount}"></div>
+            <div class="card-sub">Java <span th:text="${javaVersion}"></span></div>
+        </div>
+    </div>
+
+    <!-- DB 커넥션 풀 카드 -->
+    <div class="cards">
+        <div class="card" style="border-top: 4px solid #26a69a;">
+            <div class="card-label">DB 활성 커넥션</div>
+            <div class="card-value" id="v-dbActive" th:text="${dbActiveConns}"></div>
+            <div class="card-sub">최대 풀: <span id="v-dbPoolMax" th:text="${dbPoolMax}"></span></div>
+            <div class="heap-bar">
+                <div class="heap-fill" id="v-dbBar" th:style="'width:' + (${dbPoolMax != null && dbPoolMax > 0 ? (dbActiveConns * 100 / dbPoolMax) : 0}) + '%; background: #26a69a'"></div>
+            </div>
+        </div>
+        <div class="card" style="border-top: 4px solid #29b6f6;">
+            <div class="card-label">DB 유휴 커넥션</div>
+            <div class="card-value" id="v-dbIdle" th:text="${dbIdleConns}"></div>
+            <div class="card-sub">전체: <span id="v-dbTotal" th:text="${dbTotalConns}"></span></div>
+        </div>
+        <div class="card" style="border-top: 4px solid #ffa726;">
+            <div class="card-label">대기 스레드</div>
+            <div class="card-value" id="v-dbWaiting" th:text="${dbWaitingThreads}"></div>
+            <div class="card-sub">타임아웃: <span th:text="${dbConnTimeout}"></span></div>
+        </div>
+        <div class="card" style="border-top: 4px solid #78909c;">
+            <div class="card-label">데이터베이스</div>
+            <div class="card-value" style="font-size:16px;" id="v-dbCatalog" th:text="${dbCatalog}"></div>
+            <div class="card-sub" id="v-dbProduct" th:text="${dbProduct}"></div>
+        </div>
+    </div>
+
+    <!-- 캐시 상세 -->
+    <div class="section">
+        <h3>&#9889; Caffeine 캐시 상세</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>캐시 이름</th>
+                <th class="amount">엔트리 수</th>
+                <th class="amount">요청</th>
+                <th class="amount">Hit</th>
+                <th class="amount">Miss</th>
+                <th class="amount">적중률</th>
+                <th class="amount">퇴출</th>
+            </tr>
+            </thead>
+            <tbody id="cacheTableBody">
+            <tr th:each="c : ${cacheList}">
+                <td><span class="badge-name" th:text="${c.name}"></span></td>
+                <td class="amount" th:text="${c.size}"></td>
+                <td class="amount" th:text="${c.requestCount}"></td>
+                <td class="amount" style="color:#66bb6a; font-weight:700;" th:text="${c.hitCount}"></td>
+                <td class="amount" style="color:#ef5350; font-weight:700;" th:text="${c.missCount}"></td>
+                <td class="amount" th:text="${c.hitRate}"></td>
+                <td class="amount" th:text="${c.evictionCount}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 시스템 정보 -->
+    <div class="section">
+        <h3>&#128421; 시스템 정보</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Java 버전</span>
+                <span class="val" th:text="${javaVersion}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">운영체제</span>
+                <span class="val" th:text="${osName}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">Heap 사용</span>
+                <span class="val" id="v-heapInfo" th:text="${heapUsed} + ' / ' + ${heapMax}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">Non-Heap 사용</span>
+                <span class="val" id="v-nonHeap" th:text="${nonHeapUsed}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">캐시 설정</span>
+                <span class="val">최대 100개 / TTL 10분</span>
+            </div>
+            <div class="info-item">
+                <span class="label">캐시 영역 수</span>
+                <span class="val" id="v-cacheCount" th:text="${cacheList.size()} + '개'"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DB 상세 정보 -->
+    <div class="section">
+        <h3>&#128450; 데이터베이스 정보</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">DB 엔진</span>
+                <span class="val" th:text="${dbProduct}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">JDBC 드라이버</span>
+                <span class="val" th:text="${dbDriver}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">데이터베이스</span>
+                <span class="val" th:text="${dbCatalog}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">커넥션 풀</span>
+                <span class="val" th:text="${dbPoolName}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">풀 크기 (최소/최대)</span>
+                <span class="val" id="v-dbPoolSize" th:text="${dbPoolMin} + ' / ' + ${dbPoolMax}"></span>
+            </div>
+            <div class="info-item">
+                <span class="label">최대 수명</span>
+                <span class="val" th:text="${dbMaxLifetime}"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 다크 모드
+function toggleDarkMode() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    document.getElementById('themeBtn').textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+(function() {
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.getElementById('themeBtn').textContent = '\u2600\uFE0F';
+    }
+})();
+
+// AJAX 데이터 갱신 (깜박임 없음)
+function fetchData() {
+    fetch('/monitor/api')
+        .then(function(res) { return res.json(); })
+        .then(function(d) {
+            // 카드 업데이트
+            setText('v-heapUsed', d.heapUsed);
+            setText('v-heapMax', d.heapMax);
+            setText('v-heapPercent', d.heapPercent + '%');
+            setText('v-hitRate', d.totalHitRate);
+            setText('v-hits', d.totalHits);
+            setText('v-misses', d.totalMisses);
+            setText('v-uptime', d.uptime);
+            setText('v-requests', d.totalRequests);
+            setText('v-threads', d.threadCount);
+
+            // Heap 바
+            var bar = document.getElementById('v-heapBar');
+            bar.style.width = d.heapPercent + '%';
+            bar.style.background = d.heapPercent >= 80 ? '#ef5350' : (d.heapPercent >= 60 ? '#ff9800' : '#66bb6a');
+
+            // 시스템 정보
+            setText('v-heapInfo', d.heapUsed + ' / ' + d.heapMax);
+            setText('v-nonHeap', d.nonHeapUsed);
+            setText('v-cacheCount', d.cacheList.length + '개');
+
+            // 캐시 테이블
+            var tbody = document.getElementById('cacheTableBody');
+            tbody.innerHTML = '';
+            d.cacheList.forEach(function(c) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td><span class="badge-name">' + c.name + '</span></td>' +
+                    '<td class="amount">' + c.size + '</td>' +
+                    '<td class="amount">' + c.requestCount + '</td>' +
+                    '<td class="amount" style="color:#66bb6a;font-weight:700;">' + c.hitCount + '</td>' +
+                    '<td class="amount" style="color:#ef5350;font-weight:700;">' + c.missCount + '</td>' +
+                    '<td class="amount">' + c.hitRate + '</td>' +
+                    '<td class="amount">' + c.evictionCount + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            // DB 커넥션 풀 업데이트
+            setText('v-dbActive', d.dbActiveConns);
+            setText('v-dbIdle', d.dbIdleConns);
+            setText('v-dbTotal', d.dbTotalConns);
+            setText('v-dbWaiting', d.dbWaitingThreads);
+            setText('v-dbPoolMax', d.dbPoolMax);
+            setText('v-dbCatalog', d.dbCatalog);
+            setText('v-dbProduct', d.dbProduct);
+            setText('v-dbPoolSize', d.dbPoolMin + ' / ' + d.dbPoolMax);
+            var dbBar = document.getElementById('v-dbBar');
+            if (dbBar && d.dbPoolMax > 0) {
+                dbBar.style.width = (d.dbActiveConns * 100 / d.dbPoolMax) + '%';
+            }
+
+            // 갱신 플래시 효과
+            document.querySelectorAll('.card').forEach(function(el) {
+                el.classList.remove('updated-flash');
+                void el.offsetWidth;
+                el.classList.add('updated-flash');
+            });
+        })
+        .catch(function(err) {
+            console.error('모니터링 데이터 갱신 실패:', err);
+        });
+}
+
+function setText(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+// 자동 갱신 타이머
+var refreshTimer = null;
+var countdownTimer = null;
+var remaining = 0;
+
+function changeInterval() {
+    var sec = parseInt(document.getElementById('refreshInterval').value);
+    localStorage.setItem('monitorRefresh', sec);
+    startAutoRefresh(sec);
+}
+
+function startAutoRefresh(sec) {
+    clearInterval(refreshTimer);
+    clearInterval(countdownTimer);
+    var statusEl = document.getElementById('refreshStatus');
+
+    if (!sec || sec <= 0) {
+        statusEl.textContent = '';
+        statusEl.className = 'refresh-status';
+        return;
+    }
+
+    remaining = sec;
+    statusEl.className = 'refresh-status active';
+
+    function tick() {
+        if (remaining >= 60) {
+            statusEl.textContent = Math.floor(remaining / 60) + '분 ' + (remaining % 60) + '초';
+        } else {
+            statusEl.textContent = remaining + '초';
+        }
+    }
+    tick();
+
+    countdownTimer = setInterval(function() {
+        remaining--;
+        if (remaining <= 0) {
+            fetchData();
+            remaining = sec;
+        }
+        tick();
+    }, 1000);
+}
+
+// 페이지 로드 시 저장된 갱신주기 복원
+(function() {
+    var saved = localStorage.getItem('monitorRefresh');
+    var sec = saved !== null ? parseInt(saved) : 30;
+    var sel = document.getElementById('refreshInterval');
+    sel.value = sec;
+    startAutoRefresh(sec);
+})();
+</script>
+</body>
+</html>

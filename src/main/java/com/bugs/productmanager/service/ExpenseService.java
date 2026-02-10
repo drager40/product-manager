@@ -2,6 +2,8 @@ package com.bugs.productmanager.service;
 
 import com.bugs.productmanager.model.Expense;
 import com.bugs.productmanager.repository.ExpenseRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -57,10 +59,12 @@ public class ExpenseService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid expense Id: " + id));
     }
 
+    @CacheEvict(value = {"distinctYm", "distinctCategory", "distinctDivision", "distinctPurpose", "distinctStoreName"}, allEntries = true)
     public Expense save(Expense expense) {
         return expenseRepository.save(expense);
     }
 
+    @CacheEvict(value = {"distinctYm", "distinctCategory", "distinctDivision", "distinctPurpose", "distinctStoreName"}, allEntries = true)
     public void deleteById(Long id) {
         expenseRepository.deleteById(id);
     }
@@ -69,22 +73,27 @@ public class ExpenseService {
         return expenseRepository.findById(id).orElse(null);
     }
 
+    @Cacheable("distinctYm")
     public List<String> findDistinctYm() {
         return expenseRepository.findDistinctYm();
     }
 
+    @Cacheable("distinctCategory")
     public List<String> findDistinctCategory() {
         return expenseRepository.findDistinctCategory();
     }
 
+    @Cacheable("distinctDivision")
     public List<String> findDistinctDivision() {
         return expenseRepository.findDistinctDivision();
     }
 
+    @Cacheable("distinctPurpose")
     public List<String> findDistinctPurpose() {
         return expenseRepository.findDistinctPurpose();
     }
 
+    @Cacheable("distinctStoreName")
     public List<String> findDistinctStoreName() {
         return expenseRepository.findDistinctStoreName();
     }

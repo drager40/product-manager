@@ -96,8 +96,26 @@ public class ExpenseController {
         model.addAttribute("selectedSearchType", searchType != null ? searchType : "storeName");
         model.addAttribute("selectedSearchKeyword", searchKeyword != null ? searchKeyword : "");
         model.addAttribute("isAdmin", isAdmin);
+        // 사용률 계산
+        int usagePercent = budgetTotal.compareTo(BigDecimal.ZERO) > 0
+                ? totalAmount.multiply(BigDecimal.valueOf(100)).divide(budgetTotal, 0, java.math.RoundingMode.HALF_UP).intValue()
+                : 0;
+        model.addAttribute("usagePercent", usagePercent);
         model.addAttribute("budgetList", budgets);
-        model.addAttribute("usedAmountMap", expenseService.calcUsedAmountByBudgetKey(expenses));
+        Map<String, BigDecimal> usedAmountMap = expenseService.calcUsedAmountByBudgetKey(expenses);
+        model.addAttribute("usedAmountMap", usedAmountMap);
+
+        // 예산별 사용률 맵 (Thymeleaf에서 복잡한 계산 제거)
+        Map<String, Integer> budgetUsageMap = new LinkedHashMap<>();
+        for (Budget b : budgets) {
+            String key = b.getYm() + "_" + b.getCategory() + "_" + b.getDivision();
+            BigDecimal used = usedAmountMap.getOrDefault(key, BigDecimal.ZERO);
+            BigDecimal total = b.getTotalBudget();
+            int pct = total.compareTo(BigDecimal.ZERO) > 0
+                    ? used.multiply(BigDecimal.valueOf(100)).divide(total, 0, java.math.RoundingMode.HALF_UP).intValue() : 0;
+            budgetUsageMap.put(key, pct);
+        }
+        model.addAttribute("budgetUsageMap", budgetUsageMap);
 
         // 차트 데이터: 최근 1년치 고정 (현재월 기준 12개월 전 ~ 현재월)
         YearMonth now = YearMonth.now();
@@ -114,16 +132,51 @@ public class ExpenseController {
         List<String> chartLabels = new ArrayList<>();
         List<BigDecimal> chartUsedValues = new ArrayList<>();
         List<BigDecimal> chartRemainValues = new ArrayList<>();
+        // 전년 동월 데이터
+        List<String> prevYearYmList = new ArrayList<>();
         for (String ym2 : chartYmList) {
+            YearMonth m = YearMonth.parse(ym2, fmt);
+            prevYearYmList.add(m.minusYears(1).format(fmt));
+        }
+        List<Expense> prevYearExpenses = expenseService.findFiltered(prevYearYmList, category, divValues, purpose, storeName);
+        Map<String, BigDecimal> prevYearUsedData = expenseService.calcAmountByYm(prevYearExpenses);
+
+        List<BigDecimal> chartPrevYearValues = new ArrayList<>();
+        for (int i = 0; i < chartYmList.size(); i++) {
+            String ym2 = chartYmList.get(i);
             chartLabels.add(ym2);
             BigDecimal used = chartUsedData.getOrDefault(ym2, BigDecimal.ZERO);
             BigDecimal budgetAmt = chartBudgetData.getOrDefault(ym2, BigDecimal.ZERO);
             chartUsedValues.add(used);
             chartRemainValues.add(budgetAmt.subtract(used));
+            chartPrevYearValues.add(prevYearUsedData.getOrDefault(prevYearYmList.get(i), BigDecimal.ZERO));
         }
         model.addAttribute("chartLabels", chartLabels);
         model.addAttribute("chartUsedValues", chartUsedValues);
         model.addAttribute("chartRemainValues", chartRemainValues);
+        model.addAttribute("chartPrevYearValues", chartPrevYearValues);
+
+        // 파이 차트 데이터: 카테고리별 사용금액
+        Map<String, BigDecimal> catAmountMap = new LinkedHashMap<>();
+        for (Expense e : expenses) {
+            String cat = e.getCategory() != null ? e.getCategory() : "기타";
+            catAmountMap.merge(cat, e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO, BigDecimal::add);
+        }
+        model.addAttribute("pieLabels", new ArrayList<>(catAmountMap.keySet()));
+        model.addAttribute("pieValues", new ArrayList<>(catAmountMap.values()));
+
+        // 파이 차트: 구분별 사용금액
+        Map<String, BigDecimal> divAmountMap = new LinkedHashMap<>();
+        for (Expense e : expenses) {
+            String div = e.getDivision() != null ? e.getDivision() : "기타";
+            divAmountMap.merge(div, e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO, BigDecimal::add);
+        }
+        model.addAttribute("pieDivLabels", new ArrayList<>(divAmountMap.keySet()));
+        model.addAttribute("pieDivValues", new ArrayList<>(divAmountMap.values()));
+
+        // 상세조건(검색어) 사용 여부 → 차트에서 잔여금액 숨김
+        boolean hasSearchKeyword = searchKeyword != null && !searchKeyword.trim().isEmpty();
+        model.addAttribute("hasSearchKeyword", hasSearchKeyword);
 
         return "expense/list";
     }
@@ -262,6 +315,21 @@ public class ExpenseController {
                 "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
 
         excelService.exportExcel(expenses, budgets, response.getOutputStream());
+    }
+
+    // ==================== 전체 백업 ====================
+
+    @GetMapping("/backup")
+    public void backupAll(HttpServletResponse response) throws IOException {
+        List<Expense> allExpenses = expenseService.findFiltered(List.of(), null, List.of(), null, null);
+        List<Budget> allBudgets = budgetService.findFiltered(List.of(), null, List.of());
+
+        String filename = "경비예산_전체백업_" + java.time.LocalDate.now() + ".xlsx";
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition",
+                "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+
+        excelService.exportExcel(allExpenses, allBudgets, response.getOutputStream());
     }
 
     // ==================== Helpers ====================

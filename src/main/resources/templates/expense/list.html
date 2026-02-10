@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NHN 경비 관리</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -51,7 +52,15 @@
         .summary-card.used { border-left: 4px solid #ef5350; }
         .summary-card.remain { border-left: 4px solid #ffa726; }
         .summary-card.count { border-left: 4px solid #ab47bc; }
+        .summary-card.usage { border-left: 4px solid #ff7043; }
         .value.negative { color: #ef5350; }
+        .value.warning { color: #ff9800; }
+        .value.danger { color: #ef5350; }
+        .usage-bar { height: 6px; background: #e0e0e0; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+        .usage-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .alert-banner { background: #fff3e0; border: 1px solid #ffcc80; color: #e65100; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+        .alert-banner.danger { background: #ffebee; border-color: #ef9a9a; color: #c62828; }
+        .alert-banner .icon { font-size: 20px; }
 
         .budget-edit { background: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
         .budget-edit h3 { font-size: 14px; color: #555; margin-bottom: 12px; }
@@ -61,7 +70,12 @@
         .budget-form input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 160px; }
         .btn-budget { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
 
-        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; max-height: 300px; }
+        .charts-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .chart-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex: 1; min-width: 0; }
+        .chart-container.bar-chart { flex: 2; height: 300px; min-width: 500px; }
+        .chart-container.pie-charts { flex: 1; display: flex; gap: 12px; min-width: 300px; height: 300px; }
+        .pie-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .pie-wrap canvas { width: 100% !important; height: 100% !important; }
 
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         th { background: #333; color: white; padding: 12px 16px; text-align: left; font-size: 13px; }
@@ -83,6 +97,50 @@
         th.sortable::after { content: '\2195'; position: absolute; right: 8px; opacity: 0.4; font-size: 12px; }
         th.sortable.asc::after { content: '\25B2'; opacity: 1; font-size: 10px; }
         th.sortable.desc::after { content: '\25BC'; opacity: 1; font-size: 10px; }
+
+        /* 다크 모드 토글 */
+        .theme-toggle { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .theme-toggle:hover { background: rgba(255,255,255,0.3); }
+
+        /* 다크 모드 */
+        body.dark { background: #1a1a2e; color: #e0e0e0; }
+        body.dark .filter-bar, body.dark .summary-card, body.dark .chart-container, body.dark .budget-edit, body.dark .panel { background: #16213e; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark table { background: #16213e; }
+        body.dark th { background: #0f3460; color: #e0e0e0; }
+        body.dark td { border-bottom-color: #1a1a3e; color: #e0e0e0; }
+        body.dark tr:hover { background: #1a1a3e; }
+        body.dark .filter-group label { color: #aaa; }
+        body.dark .filter-group select, body.dark .ym-dropdown-btn, body.dark input[type="text"] { background: #0f3460; color: #e0e0e0; border-color: #333; }
+        body.dark .ym-dropdown-list { background: #16213e; border-color: #333; }
+        body.dark .ym-dropdown-list label:hover { background: #1a1a3e; }
+        body.dark .summary-card .label { color: #999; }
+        body.dark .summary-card .value { color: #e0e0e0; }
+        body.dark .empty { color: #666; }
+        body.dark .alert-banner { background: #2a1a00; border-color: #664400; color: #ffcc80; }
+        body.dark .alert-banner.danger { background: #2a0000; border-color: #660000; color: #ef9a9a; }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; flex-direction: column; gap: 8px; }
+            .header h1 { font-size: 16px; }
+            .header-right { flex-wrap: wrap; justify-content: center; gap: 8px; font-size: 12px; }
+            .container { padding: 0 12px; margin: 12px auto; }
+            .filter-bar { flex-direction: column; gap: 8px; padding: 12px; }
+            .filter-group { width: 100%; }
+            .filter-group select, .ym-dropdown-btn { width: 100%; }
+            .btn-group-right { margin-left: 0; width: 100%; flex-wrap: wrap; }
+            .btn-add { flex: 1; text-align: center; }
+            .summary { flex-direction: column; }
+            .summary-card { min-width: auto; }
+            .charts-row { flex-direction: column; }
+            .chart-container.bar-chart, .chart-container.pie-charts { flex: none; width: 100%; min-width: auto; }
+            .chart-container.pie-charts { flex-direction: column; height: auto; }
+            .chart-container.bar-chart { height: 250px; min-width: auto; }
+            .pie-wrap { height: 200px; }
+            table { font-size: 12px; display: block; overflow-x: auto; white-space: nowrap; }
+            th, td { padding: 8px 10px; }
+            .actions { flex-direction: column; gap: 4px; }
+        }
     </style>
 </head>
 <body>
@@ -90,10 +148,13 @@
     <h1><a href="/" style="color:white; text-decoration:none;">NHN 경비 관리</a></h1>
     <div class="header-right">
         <div class="nav-links">
+            <a href="/" class="nav-link">대시보드</a>
             <a href="/expenses" class="nav-link active">경비</a>
-            <a href="/products" class="nav-link">상품</a>
+            <a href="/monitor" class="nav-link" sec:authorize="hasRole('ADMIN')">모니터링</a>
+            <a href="/admin/users" class="nav-link" sec:authorize="hasRole('ADMIN')">사용자</a>
         </div>
         <span sec:authentication="name"></span>
+        <button class="theme-toggle" onclick="toggleDarkMode()" id="themeBtn">🌙</button>
         <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
         <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
             <button type="submit" class="btn-logout">로그아웃</button>
@@ -155,6 +216,14 @@
         </div>
     </form>
 
+    <!-- 예산 초과/경고 배너 -->
+    <div th:if="${usagePercent >= 100}" class="alert-banner danger">
+        <span class="icon">&#9888;</span> 예산을 초과했습니다! (사용률 <span th:text="${usagePercent}"></span>%)
+    </div>
+    <div th:if="${usagePercent >= 80 and usagePercent < 100}" class="alert-banner">
+        <span class="icon">&#9888;</span> 예산 사용률이 <span th:text="${usagePercent}"></span>%입니다. 주의해주세요!
+    </div>
+
     <!-- 예산 요약 -->
     <div class="summary">
         <div class="summary-card budget-total">
@@ -177,18 +246,38 @@
             <div class="label">금월 잔액</div>
             <div class="value" th:classappend="${remaining.signum() < 0 ? 'negative' : ''}" th:text="${#numbers.formatDecimal(remaining, 0, 'COMMA', 0, 'POINT')} + ' 원'"></div>
         </div>
+        <div class="summary-card usage">
+            <div class="label">사용률</div>
+            <div class="value" th:classappend="${usagePercent >= 100 ? 'danger' : (usagePercent >= 80 ? 'warning' : '')}" th:text="${usagePercent} + '%'"></div>
+            <div class="usage-bar">
+                <div class="usage-bar-fill" th:style="'width:' + ${usagePercent > 100 ? 100 : usagePercent} + '%; background:' + ${usagePercent >= 100 ? '#ef5350' : (usagePercent >= 80 ? '#ff9800' : '#66bb6a')}"></div>
+            </div>
+        </div>
         <div class="summary-card count">
             <div class="label">건수</div>
             <div class="value" th:text="${totalCount} + ' 건'"></div>
         </div>
     </div>
 
-    <!-- 월별 사용금액 차트 -->
-    <div class="chart-container" th:if="${chartLabels.size() > 0}">
-        <canvas id="monthlyChart"></canvas>
+    <!-- 차트 영역 -->
+    <div class="charts-row">
+        <div class="chart-container bar-chart" th:if="${chartLabels.size() > 0}">
+            <canvas id="monthlyChart" style="width:100%; height:100%;"></canvas>
+        </div>
+        <div class="chart-container pie-charts" th:if="${!expenses.isEmpty()}">
+            <div class="pie-wrap">
+                <canvas id="catPieChart"></canvas>
+            </div>
+            <div class="pie-wrap">
+                <canvas id="divPieChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <!-- 데이터 테이블 -->
+    <div th:if="${!expenses.isEmpty()}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:13px; color:#666;">조회 결과: <strong th:text="${totalCount}"></strong>건 | 합계: <strong th:text="${#numbers.formatDecimal(totalAmount, 0, 'COMMA', 0, 'POINT')}"></strong>원</span>
+    </div>
     <table th:if="${!expenses.isEmpty()}">
         <thead>
         <tr>
@@ -240,6 +329,7 @@
                 <th class="amount">예산 합계</th>
                 <th class="amount">사용금액</th>
                 <th class="amount">금월 잔액</th>
+                <th>사용률</th>
                 <th>관리</th>
             </tr>
             </thead>
@@ -253,9 +343,12 @@
                 <td class="amount" th:text="${#numbers.formatDecimal(b.monthlyAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.totalBudget, 0, 'COMMA', 0, 'POINT')}"></td>
-                <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}">
+                <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}, bUsage=${budgetUsageMap.containsKey(budgetKey) ? budgetUsageMap.get(budgetKey) : 0}">
                 <td class="amount" th:text="${#numbers.formatDecimal(used, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:classappend="${balance.signum() lt 0 ? ' negative' : ''}" th:text="${#numbers.formatDecimal(balance, 0, 'COMMA', 0, 'POINT')}"></td>
+                <td>
+                    <span th:classappend="${bUsage >= 100 ? 'danger' : (bUsage >= 80 ? 'warning' : '')}" th:text="${bUsage} + '%'" style="font-weight:600; font-size:13px;"></span>
+                </td>
                 </th:block>
                 <td>
                     <div class="actions">
@@ -271,6 +364,19 @@
 </div>
 
 <script>
+// 다크 모드
+function toggleDarkMode() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
+}
+(function() {
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.getElementById('themeBtn').textContent = '☀️';
+    }
+})();
+
 // 다운로드: 현재 폼의 필터 조건으로 다운로드
 function doDownload(e) {
     e.preventDefault();
@@ -434,33 +540,51 @@ document.addEventListener('DOMContentLoaded', function() {
     var labels = /*[[${chartLabels}]]*/ [];
     var usedValues = /*[[${chartUsedValues}]]*/ [];
     var remainValues = /*[[${chartRemainValues}]]*/ [];
+    var prevYearValues = /*[[${chartPrevYearValues}]]*/ [];
     var selectedYmList = /*[[${selectedYmList}]]*/ [];
+    var hasSearchKeyword = /*[[${hasSearchKeyword}]]*/ false;
     var usedBg = labels.map(function(lbl) {
         return selectedYmList.indexOf(lbl) >= 0 ? '#ef5350' : '#f5b7b7';
     });
     var remainBg = labels.map(function(lbl) {
         return selectedYmList.indexOf(lbl) >= 0 ? '#66bb6a' : '#c0e6c2';
     });
+    var datasets = [
+        {
+            label: '사용금액',
+            data: usedValues,
+            backgroundColor: usedBg,
+            borderRadius: 4,
+            maxBarThickness: 40
+        }
+    ];
+    // 상세조건(검색어) 없을 때만 잔여금액 표시
+    if (!hasSearchKeyword) {
+        datasets.push({
+            label: '잔여금액',
+            data: remainValues,
+            backgroundColor: remainBg,
+            borderRadius: 4,
+            maxBarThickness: 40
+        });
+    }
+    datasets.push({
+        label: '전년 동월',
+        data: prevYearValues,
+        type: 'line',
+        borderColor: '#9e9e9e',
+        borderDash: [5, 5],
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#9e9e9e',
+        fill: false,
+        tension: 0.3
+    });
     new Chart(chartEl, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: '사용금액',
-                    data: usedValues,
-                    backgroundColor: usedBg,
-                    borderRadius: 4,
-                    maxBarThickness: 40
-                },
-                {
-                    label: '잔여금액',
-                    data: remainValues,
-                    backgroundColor: remainBg,
-                    borderRadius: 4,
-                    maxBarThickness: 40
-                }
-            ]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -502,6 +626,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     grid: { display: false }
                 }
+            }
+        }
+    });
+})();
+
+// ======== 카테고리별 파이 차트 ========
+(function() {
+    var catEl = document.getElementById('catPieChart');
+    if (!catEl) return;
+    var pieLabels = /*[[${pieLabels}]]*/ [];
+    var pieValues = /*[[${pieValues}]]*/ [];
+    var catColors = { 'LINK': '#42a5f5', 'BUGS': '#ef5350' };
+    var bgColors = pieLabels.map(function(l) { return catColors[l] || '#bdbdbd'; });
+    new Chart(catEl, {
+        type: 'doughnut',
+        data: { labels: pieLabels, datasets: [{ data: pieValues, backgroundColor: bgColors, borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: '분류별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
+                legend: { position: 'bottom', labels: { font: { family: 'Pretendard', size: 11 }, padding: 8, usePointStyle: true } },
+                tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.parsed.toLocaleString('ko-KR') + ' 원'; } } }
+            }
+        }
+    });
+})();
+
+// ======== 구분별 파이 차트 ========
+(function() {
+    var divEl = document.getElementById('divPieChart');
+    if (!divEl) return;
+    var pieDivLabels = /*[[${pieDivLabels}]]*/ [];
+    var pieDivValues = /*[[${pieDivValues}]]*/ [];
+    var divColors = ['#667eea','#66bb6a','#ffa726','#ab47bc','#26c6da','#ef5350','#8d6e63'];
+    new Chart(divEl, {
+        type: 'doughnut',
+        data: { labels: pieDivLabels, datasets: [{ data: pieDivValues, backgroundColor: divColors.slice(0, pieDivLabels.length), borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: '구분별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
+                legend: { position: 'bottom', labels: { font: { family: 'Pretendard', size: 11 }, padding: 8, usePointStyle: true } },
+                tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.parsed.toLocaleString('ko-KR') + ' 원'; } } }
             }
         }
     });

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>NHN 경비 관리 - 사용자 관리</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; padding: 4px 10px; border-radius: 4px; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.2); }
+
+        .container { max-width: 900px; margin: 24px auto; padding: 0 20px; }
+        .page-title { font-size: 18px; color: #333; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+
+        .msg { padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+        .msg-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .msg-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        th { background: #333; color: white; padding: 12px 16px; text-align: left; font-size: 13px; }
+        td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        tr:hover { background: #f8f9ff; }
+
+        .badge { display: inline-block; padding: 3px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-admin { background: #e8eaf6; color: #3f51b5; border: 1px solid #9fa8da; }
+        .badge-user { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .badge-active { background: #e8f5e9; color: #2e7d32; }
+        .badge-disabled { background: #ffebee; color: #c62828; }
+
+        .actions { display: flex; gap: 6px; }
+        .btn-sm { padding: 4px 10px; border: none; border-radius: 3px; cursor: pointer; text-decoration: none; font-size: 12px; color: white; }
+        .btn-edit { background: #2196F3; }
+        .btn-delete { background: #f44336; }
+        .btn-sm:hover { opacity: 0.85; }
+        .btn-add { padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; font-weight: 600; }
+        .btn-add:hover { background: #43a047; }
+
+        .theme-toggle { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .theme-toggle:hover { background: rgba(255,255,255,0.3); }
+
+        body.dark { background: #1a1a2e; color: #e0e0e0; }
+        body.dark .page-title { color: #e0e0e0; }
+        body.dark table { background: #16213e; }
+        body.dark th { background: #0f3460; color: #e0e0e0; }
+        body.dark td { border-bottom-color: #1a1a3e; color: #e0e0e0; }
+        body.dark tr:hover { background: #1a1a3e; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1><a href="/" style="color:white; text-decoration:none;">NHN 경비 관리</a></h1>
+    <div class="header-right">
+        <div class="nav-links">
+            <a href="/" class="nav-link">대시보드</a>
+            <a href="/expenses" class="nav-link">경비</a>
+            <a href="/monitor" class="nav-link" sec:authorize="hasRole('ADMIN')">모니터링</a>
+            <a href="/admin/users" class="nav-link active" sec:authorize="hasRole('ADMIN')">사용자</a>
+        </div>
+        <span sec:authentication="name"></span>
+        <button class="theme-toggle" onclick="toggleDarkMode()" id="themeBtn">&#127769;</button>
+        <a th:href="@{/change-password}" class="btn-logout">비밀번호 변경</a>
+        <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
+            <button type="submit" class="btn-logout">로그아웃</button>
+        </form>
+    </div>
+</div>
+
+<div class="container">
+    <div class="page-title">
+        <span>사용자 관리</span>
+        <a href="/admin/users/new" class="btn-add">+ 사용자 추가</a>
+    </div>
+
+    <div th:if="${successMsg}" class="msg msg-success" th:text="${successMsg}"></div>
+    <div th:if="${errorMsg}" class="msg msg-error" th:text="${errorMsg}"></div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>아이디</th>
+            <th>역할</th>
+            <th>상태</th>
+            <th>생성일</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td th:text="${u.username}" style="font-weight:600;"></td>
+            <td>
+                <span class="badge" th:classappend="${u.role == 'ROLE_ADMIN' ? 'badge-admin' : 'badge-user'}"
+                      th:text="${u.role == 'ROLE_ADMIN' ? 'ADMIN' : 'USER'}"></span>
+            </td>
+            <td>
+                <span class="badge" th:classappend="${u.enabled ? 'badge-active' : 'badge-disabled'}"
+                      th:text="${u.enabled ? '활성' : '비활성'}"></span>
+            </td>
+            <td th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+            <td>
+                <div class="actions">
+                    <a th:href="@{/admin/users/{id}/edit(id=${u.id})}" class="btn-sm btn-edit">수정</a>
+                    <a th:href="@{/admin/users/{id}/delete(id=${u.id})}" class="btn-sm btn-delete"
+                       onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleDarkMode() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    document.getElementById('themeBtn').textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+(function() {
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.getElementById('themeBtn').textContent = '\u2600\uFE0F';
+    }
+})();
+</script>
+</body>
+</html>
