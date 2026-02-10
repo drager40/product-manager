@@ -193,28 +193,36 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public String save(@ModelAttribute Expense expense) {
+    public String save(@ModelAttribute Expense expense,
+                       @RequestParam(required = false) String returnFilter) {
         expenseService.save(expense);
+        if (returnFilter != null && !returnFilter.isEmpty()) {
+            return "redirect:/expenses?" + returnFilter;
+        }
         return buildRedirect(expense.getYm(), expense.getCategory(), expense.getDivision());
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    public String editForm(@PathVariable Long id,
+                           @RequestParam(required = false) String returnFilter,
+                           Model model) {
         model.addAttribute("expense", expenseService.findById(id));
         model.addAttribute("categoryList", expenseService.findDistinctCategory());
         model.addAttribute("divisionList", expenseService.findDistinctDivision());
+        model.addAttribute("returnFilter", returnFilter != null ? returnFilter : "");
         return "expense/form";
     }
 
     @GetMapping("/{id}/delete")
     public String delete(@PathVariable Long id,
-                         @RequestParam(required = false) String ym,
-                         @RequestParam(required = false) String category,
-                         @RequestParam(required = false) String division) {
-        Expense expense = expenseService.findByIdOrNull(id);
-        String redirectYm = (ym != null && !ym.isEmpty()) ? ym : (expense != null ? expense.getYm() : "");
+                         @RequestParam(required = false) String returnFilter) {
         expenseService.deleteById(id);
-        return buildRedirect(redirectYm, category, division);
+        if (returnFilter != null && !returnFilter.isEmpty()) {
+            return "redirect:/expenses?" + returnFilter;
+        }
+        Expense expense = expenseService.findByIdOrNull(id);
+        String ym = expense != null ? expense.getYm() : "";
+        return buildRedirect(ym, null, null);
     }
 
     // ==================== Budget CRUD ====================
@@ -226,28 +234,34 @@ public class ExpenseController {
     }
 
     @GetMapping("/budget/{id}/edit")
-    public String budgetEditForm(@PathVariable Long id, Model model) {
+    public String budgetEditForm(@PathVariable Long id,
+                                 @RequestParam(required = false) String returnFilter,
+                                 Model model) {
         model.addAttribute("budget", budgetService.findById(id));
+        model.addAttribute("returnFilter", returnFilter != null ? returnFilter : "");
         return "expense/budget-form";
     }
 
     @PostMapping("/budget")
-    public String saveBudget(@ModelAttribute Budget budget) {
+    public String saveBudget(@ModelAttribute Budget budget,
+                             @RequestParam(required = false) String returnFilter) {
         Budget saved = budgetService.saveOrUpdate(budget);
+        if (returnFilter != null && !returnFilter.isEmpty()) {
+            return "redirect:/expenses?" + returnFilter;
+        }
         return buildRedirect(saved.getYm(), saved.getCategory(), saved.getDivision());
     }
 
     @GetMapping("/budget/{id}/delete")
     public String deleteBudget(@PathVariable Long id,
-                               @RequestParam(required = false) String ym,
-                               @RequestParam(required = false) String category,
-                               @RequestParam(required = false) String division,
+                               @RequestParam(required = false) String returnFilter,
                                Authentication auth) {
         if (!isAdmin(auth)) return "redirect:/expenses";
-        Budget budget = budgetService.findByIdOrNull(id);
-        String redirectYm = (ym != null && !ym.isEmpty()) ? ym : (budget != null ? budget.getYm() : "");
         budgetService.deleteById(id);
-        return buildRedirect(redirectYm, category, division);
+        if (returnFilter != null && !returnFilter.isEmpty()) {
+            return "redirect:/expenses?" + returnFilter;
+        }
+        return "redirect:/expenses";
     }
 
     // ==================== Excel Upload/Download ====================

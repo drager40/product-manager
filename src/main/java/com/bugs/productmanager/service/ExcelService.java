@@ -280,7 +280,7 @@ public class ExcelService {
 
                 // Column headers
                 Row headerRow = sheet.createRow(rowNum++);
-                String[] headers = {"날짜", "용도", "상호", "금액"};
+                String[] headers = {"날짜", "내용", "상호", "금액"};
                 for (int i = 0; i < headers.length; i++) {
                     Cell cell = headerRow.createCell(i);
                     cell.setCellValue(headers[i]);

@@ -166,7 +166,7 @@
     <!-- 필터 -->
     <form class="filter-bar" th:action="@{/expenses}" method="get">
         <div class="filter-group">
-            <label>월</label>
+            <label>년월</label>
             <div class="ym-dropdown" id="ymDropdown">
                 <button type="button" class="ym-dropdown-btn" id="ymDropdownBtn">전체</button>
                 <div class="ym-dropdown-list" id="ymDropdownList">
@@ -178,14 +178,14 @@
             </div>
         </div>
         <div class="filter-group">
-            <label>분류</label>
+            <label>회사</label>
             <select name="category">
                 <option value="">전체</option>
                 <option th:each="c : ${categoryList}" th:value="${c}" th:text="${c}" th:selected="${c == selectedCategory}"></option>
             </select>
         </div>
         <div class="filter-group">
-            <label>구분</label>
+            <label>계정</label>
             <div class="ym-dropdown" id="divDropdown">
                 <button type="button" class="ym-dropdown-btn" id="divDropdownBtn">전체</button>
                 <div class="ym-dropdown-list" id="divDropdownList">
@@ -201,7 +201,7 @@
             <div style="display:flex; gap:4px;">
                 <select name="searchType" style="min-width:80px; height:34px; padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px;">
                     <option value="storeName" th:selected="${selectedSearchType == 'storeName'}">상호</option>
-                    <option value="purpose" th:selected="${selectedSearchType == 'purpose'}">용도</option>
+                    <option value="purpose" th:selected="${selectedSearchType == 'purpose'}">내용</option>
                 </select>
                 <input type="text" name="searchKeyword" th:value="${selectedSearchKeyword}" placeholder="검색어 입력" style="width:150px; padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; height:34px;">
             </div>
@@ -282,9 +282,9 @@
         <thead>
         <tr>
             <th class="sortable" data-col="0" data-type="text">날짜</th>
-            <th class="sortable" data-col="1" data-type="text">분류</th>
-            <th class="sortable" data-col="2" data-type="text">구분</th>
-            <th>용도</th>
+            <th class="sortable" data-col="1" data-type="text">회사</th>
+            <th class="sortable" data-col="2" data-type="text">계정</th>
+            <th>내용</th>
             <th class="sortable" data-col="4" data-type="text">상호</th>
             <th class="amount">금액</th>
             <th>관리</th>
@@ -302,8 +302,8 @@
             <td class="amount" th:text="${#numbers.formatDecimal(exp.amount, 0, 'COMMA', 0, 'POINT')}"></td>
             <td>
                 <div class="actions">
-                    <a th:href="@{/expenses/{id}/edit(id=${exp.id})}" class="btn-sm btn-edit">수정</a>
-                    <a th:href="@{/expenses/{id}/delete(id=${exp.id}, ym=${selectedYm}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
+                    <a th:href="@{/expenses/{id}/edit(id=${exp.id})}" class="btn-sm btn-edit filter-link">수정</a>
+                    <a th:href="@{/expenses/{id}/delete(id=${exp.id})}" class="btn-sm btn-delete filter-link"
                        onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
                 </div>
             </td>
@@ -322,8 +322,8 @@
             <thead>
             <tr>
                 <th>년월</th>
-                <th>분류</th>
-                <th>구분</th>
+                <th>회사</th>
+                <th>계정</th>
                 <th class="amount">금월 예산</th>
                 <th class="amount">전월 잔여</th>
                 <th class="amount">예산 합계</th>
@@ -352,8 +352,8 @@
                 </th:block>
                 <td>
                     <div class="actions">
-                        <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit">수정</a>
-                        <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id}, ym=${b.ym}, category=${selectedCategory}, division=${selectedDivision})}" class="btn-sm btn-delete"
+                        <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit filter-link">수정</a>
+                        <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id})}" class="btn-sm btn-delete filter-link"
                            onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
                     </div>
                 </td>
@@ -530,6 +530,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // 날짜 컬럼 초기 정렬: desc
     var dateTh = document.querySelector('th.sortable[data-col="0"]');
     if (dateTh) sortByCol(dateTh, 'desc');
+
+    // ======== 수정/삭제 링크에 현재 필터 조건 전달 ========
+    function getCurrentFilter() {
+        var form = document.querySelector('.filter-bar');
+        var params = new URLSearchParams(new FormData(form));
+        return params.toString();
+    }
+
+    document.querySelectorAll('.filter-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            var filter = getCurrentFilter();
+            var href = link.getAttribute('href');
+            var sep = href.indexOf('?') >= 0 ? '&' : '?';
+            link.setAttribute('href', href + sep + 'returnFilter=' + encodeURIComponent(filter));
+        });
+    });
 });
 </script>
 <script th:inline="javascript">
@@ -645,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
-                title: { display: true, text: '분류별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
+                title: { display: true, text: '회사별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
                 legend: { position: 'bottom', labels: { font: { family: 'Pretendard', size: 11 }, padding: 8, usePointStyle: true } },
                 tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.parsed.toLocaleString('ko-KR') + ' 원'; } } }
             }
@@ -666,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
-                title: { display: true, text: '구분별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
+                title: { display: true, text: '계정별', font: { family: 'Pretendard', size: 13, weight: 'bold' } },
                 legend: { position: 'bottom', labels: { font: { family: 'Pretendard', size: 11 }, padding: 8, usePointStyle: true } },
                 tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.parsed.toLocaleString('ko-KR') + ' 원'; } } }
             }

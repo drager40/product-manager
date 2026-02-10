@@ -137,7 +137,7 @@
             <h3>최근 경비 내역</h3>
             <table th:if="${!recentExpenses.isEmpty()}">
                 <thead>
-                <tr><th>날짜</th><th>분류</th><th>용도</th><th>상호</th><th class="amount">금액</th></tr>
+                <tr><th>날짜</th><th>회사</th><th>내용</th><th>상호</th><th class="amount">금액</th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="exp : ${recentExpenses}">
@@ -155,7 +155,7 @@
             </div>
         </div>
         <div class="panel">
-            <h3>분류별 사용현황</h3>
+            <h3>회사별 사용현황</h3>
             <canvas id="dashPieChart" style="max-height:200px;"></canvas>
         </div>
     </div>

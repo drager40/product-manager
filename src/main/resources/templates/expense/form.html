@@ -62,6 +62,7 @@
 
         <form th:action="@{/expenses}" th:object="${expense}" method="post">
             <input type="hidden" th:field="*{id}"/>
+            <input type="hidden" name="returnFilter" th:value="${returnFilter}"/>
 
             <div class="form-row">
                 <div class="form-group">
@@ -76,7 +77,7 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>분류</label>
+                    <label>회사</label>
                     <select th:field="*{category}" required>
                         <option value="">선택</option>
                         <option value="LINK">LINK</option>
@@ -84,7 +85,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>구분</label>
+                    <label>계정</label>
                     <select th:field="*{division}" required>
                         <option value="">선택</option>
                         <option value="경비">경비</option>
@@ -96,7 +97,7 @@
             </div>
 
             <div class="form-group">
-                <label>용도</label>
+                <label>내용</label>
                 <input type="text" th:field="*{purpose}" required placeholder="회식, 미팅 등"/>
             </div>
 
@@ -112,14 +113,21 @@
 
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary">저장</button>
-                <a th:href="@{/expenses}" class="btn btn-cancel">취소</a>
+                <a th:href="@{/expenses}" class="btn btn-cancel" id="cancelBtn">취소</a>
             </div>
         </form>
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
 (function() {
+    // ======== 취소 버튼: 원래 필터 조건으로 복귀 ========
+    var returnFilter = /*[[${returnFilter}]]*/ '';
+    if (returnFilter) {
+        var cancelBtn = document.getElementById('cancelBtn');
+        if (cancelBtn) cancelBtn.href = '/expenses?' + returnFilter;
+    }
+
     // ======== 카드번호 → 분류/구분 매핑 ========
     var CARD_MAP = {
         '6708': { category: 'LINK' },
@@ -278,14 +286,14 @@
             var mapping = CARD_MAP[parsed.cardNo];
             if (mapping.category) {
                 setSelect('category', mapping.category);
-                messages.push('분류: ' + mapping.category + ' (카드 ' + parsed.cardNo + ')');
+                messages.push('회사: ' + mapping.category + ' (카드 ' + parsed.cardNo + ')');
             }
             if (mapping.division) {
                 setSelect('division', mapping.division);
-                messages.push('구분: ' + mapping.division);
+                messages.push('계정: ' + mapping.division);
             }
         } else if (parsed.cardNo) {
-            warnings.push('카드 ' + parsed.cardNo + ': 매핑 정보 없음 (분류를 직접 선택하세요)');
+            warnings.push('카드 ' + parsed.cardNo + ': 매핑 정보 없음 (회사를 직접 선택하세요)');
         }
 
         // 결과 메시지
