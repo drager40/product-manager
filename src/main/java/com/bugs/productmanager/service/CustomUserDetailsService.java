@@ -1,9 +1,9 @@
 package com.bugs.productmanager.service;
 
+import com.bugs.productmanager.config.CustomUserPrincipal;
 import com.bugs.productmanager.model.AppUser;
 import com.bugs.productmanager.repository.AppUserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -25,12 +25,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         AppUser appUser = appUserRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
 
-        return new User(
+        return new CustomUserPrincipal(
                 appUser.getUsername(),
                 appUser.getPassword(),
                 appUser.isEnabled(),
-                true, true, true,
-                List.of(new SimpleGrantedAuthority(appUser.getRole()))
+                List.of(new SimpleGrantedAuthority(appUser.getRole())),
+                appUser.getCompany(),
+                appUser.getDepartment(),
+                appUser.getTeam()
         );
     }
 }

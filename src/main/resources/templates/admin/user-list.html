@@ -31,7 +31,9 @@
 
         .badge { display: inline-block; padding: 3px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; }
         .badge-admin { background: #e8eaf6; color: #3f51b5; border: 1px solid #9fa8da; }
-        .badge-user { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .badge-company { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+        .badge-dept { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .badge-team { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
         .badge-active { background: #e8f5e9; color: #2e7d32; }
         .badge-disabled { background: #ffebee; color: #c62828; }
 
@@ -87,6 +89,9 @@
         <tr>
             <th>아이디</th>
             <th>역할</th>
+            <th>회사</th>
+            <th>실</th>
+            <th>팀</th>
             <th>상태</th>
             <th>생성일</th>
             <th>관리</th>
@@ -96,9 +101,13 @@
         <tr th:each="u : ${users}">
             <td th:text="${u.username}" style="font-weight:600;"></td>
             <td>
-                <span class="badge" th:classappend="${u.role == 'ROLE_ADMIN' ? 'badge-admin' : 'badge-user'}"
-                      th:text="${u.role == 'ROLE_ADMIN' ? 'ADMIN' : 'USER'}"></span>
+                <span class="badge"
+                      th:classappend="${u.role == 'ROLE_ADMIN' ? 'badge-admin' : (u.role == 'ROLE_COMPANY' ? 'badge-company' : (u.role == 'ROLE_DEPARTMENT' ? 'badge-dept' : 'badge-team'))}"
+                      th:text="${u.role == 'ROLE_ADMIN' ? 'ADMIN' : (u.role == 'ROLE_COMPANY' ? 'COMPANY' : (u.role == 'ROLE_DEPARTMENT' ? 'DEPT' : 'TEAM'))}"></span>
             </td>
+            <td th:text="${u.company != null ? u.company : '-'}"></td>
+            <td th:text="${u.department != null ? u.department : '-'}"></td>
+            <td th:text="${u.team != null ? u.team : '-'}"></td>
             <td>
                 <span class="badge" th:classappend="${u.enabled ? 'badge-active' : 'badge-disabled'}"
                       th:text="${u.enabled ? '활성' : '비활성'}"></span>

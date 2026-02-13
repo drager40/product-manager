@@ -17,11 +17,20 @@ public class AppUser {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, length = 20)
-    private String role = "ROLE_USER";
+    @Column(nullable = false, length = 30)
+    private String role = "ROLE_TEAM";
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    @Column(length = 20)
+    private String company;
+
+    @Column(length = 50)
+    private String department;
+
+    @Column(length = 50)
+    private String team;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -55,6 +64,15 @@ public class AppUser {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public String getCompany() { return company; }
+    public void setCompany(String company) { this.company = company; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getTeam() { return team; }
+    public void setTeam(String team) { this.team = team; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

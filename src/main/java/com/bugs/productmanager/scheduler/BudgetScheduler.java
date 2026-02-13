@@ -67,7 +67,7 @@ public class BudgetScheduler {
             return;
         }
 
-        // 전월 사용금액 계산 (category+division별)
+        // 전월 사용금액 계산 (category+division+department+team별)
         List<Expense> prevExpenses = expenseService.findFiltered(prevYm, null, null);
         Map<String, BigDecimal> usedMap = expenseService.calcUsedAmountByBudgetKey(prevExpenses);
 
@@ -77,13 +77,17 @@ public class BudgetScheduler {
             newBudget.setYm(currentYm);
             newBudget.setCategory(prev.getCategory());
             newBudget.setDivision(prev.getDivision());
+            newBudget.setDepartment(prev.getDepartment());
+            newBudget.setTeam(prev.getTeam());
 
             // 금월예산: 전월 금월예산 그대로
             newBudget.setMonthlyAmount(prev.getMonthlyAmount() != null ? prev.getMonthlyAmount() : BigDecimal.ZERO);
 
             // 전월잔여: 전월 예산합계 - 전월 사용금액
             BigDecimal prevTotal = prev.getTotalBudget();
-            String key = prevYm + "_" + prev.getCategory() + "_" + prev.getDivision();
+            String dept = prev.getDepartment() != null ? prev.getDepartment() : "";
+            String tm = prev.getTeam() != null ? prev.getTeam() : "";
+            String key = prevYm + "_" + prev.getCategory() + "_" + prev.getDivision() + "_" + dept + "_" + tm;
             BigDecimal prevUsed = usedMap.getOrDefault(key, BigDecimal.ZERO);
             BigDecimal prevRemain = prevTotal.subtract(prevUsed);
             newBudget.setPrevRemaining(prevRemain);
@@ -91,8 +95,8 @@ public class BudgetScheduler {
             budgetRepository.save(newBudget);
             created++;
 
-            log.info("  생성: {} / {} / {} → 금월예산={}, 전월잔여={}",
-                    currentYm, prev.getCategory(), prev.getDivision(),
+            log.info("  생성: {} / {} / {} / {} / {} → 금월예산={}, 전월잔여={}",
+                    currentYm, prev.getCategory(), prev.getDivision(), prev.getDepartment(), prev.getTeam(),
                     newBudget.getMonthlyAmount(), newBudget.getPrevRemaining());
         }
 

@@ -96,6 +96,25 @@
                 </div>
             </div>
 
+            <div class="form-row">
+                <div class="form-group">
+                    <label>실</label>
+                    <select th:field="*{department}" id="deptSelect" th:disabled="${!isAdmin}">
+                        <option value="">선택</option>
+                        <option value="BUGS개발실">BUGS개발실</option>
+                        <option value="LINK개발실">LINK개발실</option>
+                    </select>
+                    <input th:if="${!isAdmin}" type="hidden" name="department" th:value="${expense.department}"/>
+                </div>
+                <div class="form-group">
+                    <label>팀</label>
+                    <select th:field="*{team}" id="teamSelect" th:disabled="${!isAdmin}">
+                        <option value="">선택 (실 먼저 선택)</option>
+                    </select>
+                    <input th:if="${!isAdmin}" type="hidden" name="team" th:value="${expense.team}"/>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>내용</label>
                 <input type="text" th:field="*{purpose}" required placeholder="회식, 미팅 등"/>
@@ -121,6 +140,43 @@
 
 <script th:inline="javascript">
 (function() {
+    // ======== 실/팀 캐스케이딩 ========
+    var DEPT_TEAM_MAP = {
+        'BUGS개발실': ['프론트개발팀', '백앤드개발팀'],
+        'LINK개발실': ['서비스개발팀', '운영개발팀']
+    };
+    var deptSelect = document.getElementById('deptSelect');
+    var teamSelect = document.getElementById('teamSelect');
+    var currentTeam = /*[[${expense.team}]]*/ '';
+
+    function updateTeamOptions() {
+        var dept = deptSelect ? deptSelect.value : '';
+        if (!teamSelect) return;
+        teamSelect.innerHTML = '<option value="">선택</option>';
+        if (dept && DEPT_TEAM_MAP[dept]) {
+            DEPT_TEAM_MAP[dept].forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === currentTeam) opt.selected = true;
+                teamSelect.appendChild(opt);
+            });
+        }
+    }
+    if (deptSelect) {
+        deptSelect.addEventListener('change', function() { currentTeam = ''; updateTeamOptions(); });
+        updateTeamOptions();
+    }
+
+    // submit 시 disabled select 해제 (브라우저 유효성 검사 우회)
+    var form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var disabled = form.querySelectorAll('select[disabled]');
+            disabled.forEach(function(el) { el.disabled = false; });
+        });
+    }
+
     // ======== 취소 버튼: 원래 필터 조건으로 복귀 ========
     var returnFilter = /*[[${returnFilter}]]*/ '';
     if (returnFilter) {
@@ -145,17 +201,27 @@
         });
     }
 
-    // ======== 문자 분석 버튼 ========
+    // ======== 문자 분석 (버튼 + 붙여넣기 자동) ========
+    var smsTextEl = document.getElementById('smsText');
     var btnParse = document.getElementById('btnParse');
+
+    function doParseAndApply() {
+        var text = smsTextEl ? smsTextEl.value.trim() : '';
+        if (!text) {
+            showResult('error', '문자 내용을 입력해주세요.');
+            return;
+        }
+        var parsed = parseSms(text);
+        applyToForm(parsed);
+    }
+
     if (btnParse) {
-        btnParse.addEventListener('click', function() {
-            var text = document.getElementById('smsText').value.trim();
-            if (!text) {
-                showResult('error', '문자 내용을 입력해주세요.');
-                return;
-            }
-            var parsed = parseSms(text);
-            applyToForm(parsed);
+        btnParse.addEventListener('click', doParseAndApply);
+    }
+    // 붙여넣기 시 자동 분석
+    if (smsTextEl) {
+        smsTextEl.addEventListener('paste', function() {
+            setTimeout(doParseAndApply, 100);
         });
     }
 

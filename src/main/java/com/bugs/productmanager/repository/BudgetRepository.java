@@ -11,6 +11,9 @@ public interface BudgetRepository extends JpaRepository<Budget, Long>, JpaSpecif
 
     Optional<Budget> findByYmAndCategoryAndDivision(String ym, String category, String division);
 
+    Optional<Budget> findByYmAndCategoryAndDivisionAndDepartmentAndTeam(
+            String ym, String category, String division, String department, String team);
+
     List<Budget> findByYm(String ym);
 
     List<Budget> findByYmAndCategory(String ym, String category);

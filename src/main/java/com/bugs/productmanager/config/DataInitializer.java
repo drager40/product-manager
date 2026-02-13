@@ -30,11 +30,28 @@ public class DataInitializer implements CommandLineRunner {
             AppUser bugs = new AppUser();
             bugs.setUsername("bugs");
             bugs.setPassword(passwordEncoder.encode("bugs123"));
-            bugs.setRole("ROLE_USER");
+            bugs.setRole("ROLE_DEPARTMENT");
             bugs.setEnabled(true);
+            bugs.setCompany("BUGS");
+            bugs.setDepartment("BUGS개발실");
+            bugs.setTeam(null);
             appUserRepository.save(bugs);
 
             System.out.println("[DataInitializer] 기본 사용자 2명 생성 완료 (admin, bugs)");
+        } else {
+            // 기존 유저 역할/속성만 동기화 (비밀번호는 유지)
+            appUserRepository.findByUsername("bugs").ifPresent(bugs -> {
+                bugs.setRole("ROLE_DEPARTMENT");
+                bugs.setCompany("BUGS");
+                bugs.setDepartment("BUGS개발실");
+                bugs.setTeam(null);
+                appUserRepository.save(bugs);
+            });
+            appUserRepository.findByUsername("admin").ifPresent(admin -> {
+                admin.setRole("ROLE_ADMIN");
+                appUserRepository.save(admin);
+            });
+            System.out.println("[DataInitializer] 기존 사용자 속성 동기화 완료");
         }
     }
 }

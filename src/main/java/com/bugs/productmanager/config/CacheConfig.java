@@ -17,7 +17,8 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager(
                 "distinctYm", "distinctCategory", "distinctDivision",
-                "distinctPurpose", "distinctStoreName"
+                "distinctPurpose", "distinctStoreName",
+                "distinctDepartment", "distinctTeam"
         );
         manager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(100)

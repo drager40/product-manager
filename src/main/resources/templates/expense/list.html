@@ -38,7 +38,7 @@
         .btn-filter { padding: 0 16px; height: 34px; line-height: 34px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; display: inline-flex; align-items: center; }
         .btn-filter:hover { background: #5a6fd6; }
         .btn-reset { padding: 0 12px; height: 34px; line-height: 34px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; }
-        .btn-group-right { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+        .btn-group-right { display: flex; gap: 6px; flex-shrink: 0; }
         .btn-add { padding: 7px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; white-space: nowrap; }
         .btn-add:hover { background: #43a047; }
 
@@ -177,12 +177,13 @@
                 </div>
             </div>
         </div>
-        <div class="filter-group">
+        <div class="filter-group" th:with="catLocked=${userRole != 'ROLE_ADMIN'}">
             <label>회사</label>
-            <select name="category">
+            <select name="category" id="catSelect" th:disabled="${catLocked}">
                 <option value="">전체</option>
                 <option th:each="c : ${categoryList}" th:value="${c}" th:text="${c}" th:selected="${c == selectedCategory}"></option>
             </select>
+            <input th:if="${catLocked}" type="hidden" name="category" th:value="${selectedCategory}"/>
         </div>
         <div class="filter-group">
             <label>계정</label>
@@ -194,6 +195,28 @@
                         <label><input type="checkbox" name="division" th:value="${d}" th:checked="${selectedDivisionList.contains(d)}" class="div-cb"> <span th:text="${d}"></span></label>
                     </th:block>
                 </div>
+            </div>
+        </div>
+        <div class="filter-group" th:with="deptLocked=${userRole == 'ROLE_DEPARTMENT' or userRole == 'ROLE_TEAM'}">
+            <label>실</label>
+            <select name="department" id="deptSelect" th:disabled="${deptLocked}">
+                <option value="">전체</option>
+                <option th:each="d : ${departmentList}" th:value="${d}" th:text="${d}" th:selected="${d == selectedDepartment}"></option>
+            </select>
+            <input th:if="${deptLocked}" type="hidden" name="department" th:value="${selectedDepartment}"/>
+        </div>
+        <div class="filter-group">
+            <label>팀</label>
+            <div class="ym-dropdown" id="teamDropdown" th:with="isTeamRole=${userRole == 'ROLE_TEAM'}">
+                <button type="button" class="ym-dropdown-btn" id="teamDropdownBtn">전체</button>
+                <div class="ym-dropdown-list" id="teamDropdownList" th:unless="${isTeamRole}">
+                    <label class="all-label"><input type="checkbox" id="teamAll" checked> 전체</label>
+                    <label><input type="checkbox" name="team" value="__DEPT_ONLY__" th:checked="${selectedTeamList.contains('__DEPT_ONLY__')}" class="team-cb"> 실(자체)</label>
+                    <th:block th:each="t : ${teamList}">
+                        <label><input type="checkbox" name="team" th:value="${t}" th:checked="${selectedTeamList.contains(t)}" class="team-cb"> <span th:text="${t}"></span></label>
+                    </th:block>
+                </div>
+                <input th:if="${isTeamRole}" type="hidden" name="team" th:value="${userTeam}"/>
             </div>
         </div>
         <div class="filter-group">
@@ -208,12 +231,6 @@
         </div>
         <button type="submit" class="btn-filter">조회</button>
         <a th:href="@{/expenses}" class="btn-reset">초기화</a>
-        <div class="btn-group-right">
-            <a th:if="${isAdmin}" th:href="@{/expenses/new}" class="btn-add">+ 경비</a>
-            <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산</a>
-            <a id="downloadBtn" href="#" class="btn-add" style="background:#ff9800;" onclick="doDownload(event)">다운로드</a>
-            <a th:if="${isAdmin}" th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">업로드</a>
-        </div>
     </form>
 
     <!-- 예산 초과/경고 배너 -->
@@ -274,18 +291,26 @@
         </div>
     </div>
 
-    <!-- 데이터 테이블 -->
-    <div th:if="${!expenses.isEmpty()}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <!-- 경비 리스트 헤더 -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <span style="font-size:13px; color:#666;">조회 결과: <strong th:text="${totalCount}"></strong>건 | 합계: <strong th:text="${#numbers.formatDecimal(totalAmount, 0, 'COMMA', 0, 'POINT')}"></strong>원</span>
+        <div style="display:flex; gap:6px;">
+            <a th:href="@{/expenses/new}" class="btn-add">+ 경비</a>
+            <a th:href="@{/expenses/budget/new}" class="btn-add" style="background:#667eea;">+ 예산</a>
+            <a id="downloadBtn" href="#" class="btn-add" style="background:#ff9800;" onclick="doDownload(event)">다운로드</a>
+            <a th:href="@{/expenses/upload}" class="btn-add" style="background:#2196F3;">업로드</a>
+        </div>
     </div>
     <table th:if="${!expenses.isEmpty()}">
         <thead>
         <tr>
             <th class="sortable" data-col="0" data-type="text">날짜</th>
             <th class="sortable" data-col="1" data-type="text">회사</th>
-            <th class="sortable" data-col="2" data-type="text">계정</th>
+            <th class="sortable" data-col="2" data-type="text">실</th>
+            <th class="sortable" data-col="3" data-type="text">팀</th>
+            <th class="sortable" data-col="4" data-type="text">계정</th>
             <th>내용</th>
-            <th class="sortable" data-col="4" data-type="text">상호</th>
+            <th class="sortable" data-col="6" data-type="text">상호</th>
             <th class="amount">금액</th>
             <th>관리</th>
         </tr>
@@ -296,6 +321,8 @@
             <td>
                 <span class="badge" th:classappend="${exp.category == 'LINK' ? 'badge-link' : 'badge-bugs'}" th:text="${exp.category}"></span>
             </td>
+            <td th:text="${exp.department}"></td>
+            <td th:text="${exp.team}"></td>
             <td th:text="${exp.division}"></td>
             <td th:text="${exp.purpose}"></td>
             <td th:text="${exp.storeName}"></td>
@@ -324,6 +351,8 @@
                 <th>년월</th>
                 <th>회사</th>
                 <th>계정</th>
+                <th>실</th>
+                <th>팀</th>
                 <th class="amount">금월 예산</th>
                 <th class="amount">전월 잔여</th>
                 <th class="amount">예산 합계</th>
@@ -340,10 +369,12 @@
                     <span class="badge" th:classappend="${b.category == 'LINK' ? 'badge-link' : 'badge-bugs'}" th:text="${b.category}"></span>
                 </td>
                 <td th:text="${b.division}"></td>
+                <td th:text="${b.department}"></td>
+                <td th:text="${b.team}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.monthlyAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(b.totalBudget, 0, 'COMMA', 0, 'POINT')}"></td>
-                <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}, bUsage=${budgetUsageMap.containsKey(budgetKey) ? budgetUsageMap.get(budgetKey) : 0}">
+                <th:block th:with="budgetKey=${b.ym + '_' + b.category + '_' + b.division + '_' + (b.department != null ? b.department : '') + '_' + (b.team != null ? b.team : '')}, used=${usedAmountMap.containsKey(budgetKey) ? usedAmountMap.get(budgetKey) : T(java.math.BigDecimal).ZERO}, balance=${b.totalBudget.subtract(used)}, bUsage=${budgetUsageMap.containsKey(budgetKey) ? budgetUsageMap.get(budgetKey) : 0}">
                 <td class="amount" th:text="${#numbers.formatDecimal(used, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:classappend="${balance.signum() lt 0 ? ' negative' : ''}" th:text="${#numbers.formatDecimal(balance, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td>
@@ -351,7 +382,7 @@
                 </td>
                 </th:block>
                 <td>
-                    <div class="actions">
+                    <div class="actions" th:if="${isAdmin or (b.department == userDepartment and b.team == userTeam)}">
                         <a th:href="@{/expenses/budget/{id}/edit(id=${b.id})}" class="btn-sm btn-edit filter-link">수정</a>
                         <a th:if="${isAdmin}" th:href="@{/expenses/budget/{id}/delete(id=${b.id})}" class="btn-sm btn-delete filter-link"
                            onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
@@ -361,7 +392,7 @@
             </tbody>
             <tfoot>
             <tr style="background:#f5f5f5; font-weight:700;">
-                <td colspan="3" style="text-align:center;">합계</td>
+                <td colspan="5" style="text-align:center;">합계</td>
                 <td class="amount" th:text="${#numbers.formatDecimal(monthlyAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(prevRemaining, 0, 'COMMA', 0, 'POINT')}"></td>
                 <td class="amount" th:text="${#numbers.formatDecimal(budgetTotal, 0, 'COMMA', 0, 'POINT')}"></td>
@@ -431,6 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         list.classList.toggle('open');
         divList.classList.remove('open');
+        if (teamListEl) teamListEl.classList.remove('open');
     });
 
     document.addEventListener('click', function(e) {
@@ -439,6 +471,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (!document.getElementById('divDropdown').contains(e.target)) {
             divList.classList.remove('open');
+        }
+        var teamDd = document.getElementById('teamDropdown');
+        if (teamDd && !teamDd.contains(e.target) && teamListEl) {
+            teamListEl.classList.remove('open');
         }
     });
 
@@ -491,6 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         divList.classList.toggle('open');
         list.classList.remove('open');
+        if (teamListEl) teamListEl.classList.remove('open');
     });
 
     divAll.addEventListener('change', function() {
@@ -509,6 +546,139 @@ document.addEventListener('DOMContentLoaded', function() {
             updateDivBtnText();
         });
     });
+
+    // ======== 팀 체크박스 드롭다운 ========
+    var teamBtn = document.getElementById('teamDropdownBtn');
+    var teamListEl = document.getElementById('teamDropdownList');
+    var teamAll = document.getElementById('teamAll');
+    var teamCbs = document.querySelectorAll('.team-cb');
+
+    if (teamBtn && teamListEl && teamAll) {
+        function updateTeamBtnText() {
+            var checked = Array.from(teamCbs).filter(function(c) { return c.checked; });
+            if (checked.length === 0 || checked.length === teamCbs.length) {
+                teamBtn.textContent = '전체';
+                teamAll.checked = true;
+            } else if (checked.length === 1) {
+                var v = checked[0].value === '__DEPT_ONLY__' ? '실(자체)' : checked[0].value;
+                teamBtn.textContent = v;
+                teamAll.checked = false;
+            } else {
+                var first = checked[0].value === '__DEPT_ONLY__' ? '실(자체)' : checked[0].value;
+                teamBtn.textContent = first + ' 외 ' + (checked.length - 1) + '건';
+                teamAll.checked = false;
+            }
+        }
+
+        var teamHasSelected = Array.from(teamCbs).some(function(c) { return c.checked; });
+        if (!teamHasSelected) {
+            teamAll.checked = true;
+        } else {
+            teamAll.checked = (Array.from(teamCbs).filter(function(c) { return c.checked; }).length === teamCbs.length);
+        }
+        updateTeamBtnText();
+
+        teamBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            teamListEl.classList.toggle('open');
+            list.classList.remove('open');
+            divList.classList.remove('open');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('teamDropdown').contains(e.target)) {
+                teamListEl.classList.remove('open');
+            }
+        });
+
+        teamAll.addEventListener('change', function() {
+            teamCbs.forEach(function(c) { c.checked = teamAll.checked; });
+            updateTeamBtnText();
+        });
+
+        teamCbs.forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var allChecked = Array.from(teamCbs).every(function(c) { return c.checked; });
+                var noneChecked = Array.from(teamCbs).every(function(c) { return !c.checked; });
+                teamAll.checked = allChecked || noneChecked;
+                if (noneChecked) {
+                    teamCbs.forEach(function(c) { c.checked = false; });
+                }
+                updateTeamBtnText();
+            });
+        });
+    } else if (teamBtn) {
+        // ROLE_TEAM: 팀 고정 표시
+        var fixedTeam = document.querySelector('input[type="hidden"][name="team"]');
+        if (fixedTeam) teamBtn.textContent = fixedTeam.value || '전체';
+    }
+
+    // ======== 회사→실→팀 캐스케이딩 필터 ========
+    var COMPANY_DEPT_MAP = {
+        'BUGS': ['BUGS개발실'],
+        'LINK': ['LINK개발실']
+    };
+    var DEPT_TEAM_MAP = {
+        'BUGS개발실': ['백앤드개발팀', '프론트개발팀'],
+        'LINK개발실': ['서비스개발팀', '운영개발팀']
+    };
+
+    var catSelect = document.getElementById('catSelect');
+    var deptSelect = document.getElementById('deptSelect');
+
+    function filterDeptOptions() {
+        if (!deptSelect || deptSelect.disabled) return;
+        var selCat = catSelect ? catSelect.value : '';
+        var allowedDepts = selCat && COMPANY_DEPT_MAP[selCat] ? COMPANY_DEPT_MAP[selCat] : null;
+        Array.from(deptSelect.options).forEach(function(opt) {
+            if (opt.value === '') { opt.style.display = ''; return; }
+            opt.style.display = (!allowedDepts || allowedDepts.indexOf(opt.value) >= 0) ? '' : 'none';
+        });
+        // 선택된 실이 허용 범위 밖이면 초기화
+        if (allowedDepts && deptSelect.value && allowedDepts.indexOf(deptSelect.value) < 0) {
+            deptSelect.value = '';
+        }
+    }
+
+    function filterTeamOptions() {
+        if (!teamListEl) return;
+        var selDept = deptSelect ? deptSelect.value : '';
+        var selCat = catSelect ? catSelect.value : '';
+        // 실이 선택되면 해당 실 하위 팀만, 회사만 선택되면 회사 하위 전체 팀
+        var allowedTeams = null;
+        if (selDept && DEPT_TEAM_MAP[selDept]) {
+            allowedTeams = DEPT_TEAM_MAP[selDept];
+        } else if (selCat && COMPANY_DEPT_MAP[selCat]) {
+            allowedTeams = [];
+            COMPANY_DEPT_MAP[selCat].forEach(function(d) {
+                if (DEPT_TEAM_MAP[d]) allowedTeams = allowedTeams.concat(DEPT_TEAM_MAP[d]);
+            });
+        }
+        teamCbs = document.querySelectorAll('.team-cb');
+        teamCbs.forEach(function(cb) {
+            var lbl = cb.closest('label');
+            if (cb.value === '__DEPT_ONLY__') { lbl.style.display = ''; return; }
+            if (!allowedTeams) { lbl.style.display = ''; return; }
+            lbl.style.display = allowedTeams.indexOf(cb.value) >= 0 ? '' : 'none';
+            if (allowedTeams.indexOf(cb.value) < 0) cb.checked = false;
+        });
+        if (typeof updateTeamBtnText === 'function') updateTeamBtnText();
+    }
+
+    if (catSelect) {
+        catSelect.addEventListener('change', function() {
+            filterDeptOptions();
+            filterTeamOptions();
+        });
+    }
+    if (deptSelect) {
+        deptSelect.addEventListener('change', function() {
+            filterTeamOptions();
+        });
+    }
+    // 초기 로드 시 적용
+    filterDeptOptions();
+    filterTeamOptions();
 
     // ======== 정렬 ========
     function sortByCol(th, dir) {

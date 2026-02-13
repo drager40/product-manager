@@ -22,10 +22,18 @@ public class BudgetService {
 
     public List<Budget> findFiltered(String ym, String category, String division) {
         List<String> divList = (division != null && !division.isEmpty()) ? List.of(division) : List.of();
-        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, divList);
+        List<String> emptyTeam = List.of();
+        return findFiltered(ym != null && !ym.isEmpty() ? List.of(ym) : List.of(), category, divList, null, emptyTeam);
     }
 
-    public List<Budget> findFiltered(List<String> ymValues, String category, List<String> divValues) {
+    public List<Budget> findFilteredSingleTeam(List<String> ymValues, String category, List<String> divValues,
+                                      String department, String team) {
+        List<String> teamValues = (team != null && !team.isEmpty()) ? List.of(team) : List.of();
+        return findFiltered(ymValues, category, divValues, department, teamValues);
+    }
+
+    public List<Budget> findFiltered(List<String> ymValues, String category, List<String> divValues,
+                                      String department, List<String> teamValues) {
         Specification<Budget> spec = Specification.where(null);
 
         if (ymValues != null && !ymValues.isEmpty()) {
@@ -35,6 +43,29 @@ public class BudgetService {
         if (hasCat) spec = spec.and((r, q, cb) -> cb.equal(r.get("category"), category));
         if (divValues != null && !divValues.isEmpty()) {
             spec = spec.and((r, q, cb) -> r.get("division").in(divValues));
+        }
+        if (department != null && !department.isEmpty()) {
+            spec = spec.and((r, q, cb) -> cb.equal(r.get("department"), department));
+        }
+        // 팀 다중선택: __DEPT_ONLY__ = 실(자체), 팀명 = 해당 팀만
+        if (teamValues != null && !teamValues.isEmpty()) {
+            boolean hasDeptOnly = teamValues.contains("__DEPT_ONLY__");
+            List<String> realTeams = teamValues.stream()
+                    .filter(t -> !"__DEPT_ONLY__".equals(t) && t != null && !t.isEmpty()).toList();
+            if (hasDeptOnly && !realTeams.isEmpty()) {
+                spec = spec.and((r, q, cb) -> cb.or(
+                        cb.isNull(r.get("team")),
+                        cb.equal(r.get("team"), ""),
+                        r.get("team").in(realTeams)
+                ));
+            } else if (hasDeptOnly) {
+                spec = spec.and((r, q, cb) -> cb.or(
+                        cb.isNull(r.get("team")),
+                        cb.equal(r.get("team"), "")
+                ));
+            } else if (!realTeams.isEmpty()) {
+                spec = spec.and((r, q, cb) -> r.get("team").in(realTeams));
+            }
         }
 
         return budgetRepository.findAll(spec);
@@ -70,12 +101,13 @@ public class BudgetService {
     }
 
     /**
-     * 신규 저장 시 동일 ym+category+division이 있으면 업데이트
+     * 신규 저장 시 동일 ym+category+division+department+team이 있으면 업데이트
      */
     public Budget saveOrUpdate(Budget budget) {
         if (budget.getId() == null) {
-            Optional<Budget> existing = budgetRepository.findByYmAndCategoryAndDivision(
-                    budget.getYm(), budget.getCategory(), budget.getDivision());
+            Optional<Budget> existing = budgetRepository.findByYmAndCategoryAndDivisionAndDepartmentAndTeam(
+                    budget.getYm(), budget.getCategory(), budget.getDivision(),
+                    budget.getDepartment(), budget.getTeam());
             if (existing.isPresent()) {
                 Budget b = existing.get();
                 b.setMonthlyAmount(budget.getMonthlyAmount());

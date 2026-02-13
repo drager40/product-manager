@@ -37,4 +37,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
 
     @Query("SELECT DISTINCT e.storeName FROM Expense e WHERE e.storeName IS NOT NULL AND e.storeName <> '' ORDER BY e.storeName")
     List<String> findDistinctStoreName();
+
+    @Query("SELECT DISTINCT e.department FROM Expense e WHERE e.department IS NOT NULL AND e.department <> '' ORDER BY e.department")
+    List<String> findDistinctDepartment();
+
+    @Query("SELECT DISTINCT e.team FROM Expense e WHERE e.team IS NOT NULL AND e.team <> '' ORDER BY e.team")
+    List<String> findDistinctTeam();
 }

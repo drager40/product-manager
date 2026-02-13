@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "budget", uniqueConstraints = @UniqueConstraint(columnNames = {"ym", "category", "division"}))
+@Table(name = "budget", uniqueConstraints = @UniqueConstraint(columnNames = {"ym", "category", "division", "department", "team"}))
 public class Budget {
 
     @Id
@@ -20,6 +20,12 @@ public class Budget {
 
     @Column(nullable = false, length = 20)
     private String division;
+
+    @Column(length = 50)
+    private String department;
+
+    @Column(length = 50)
+    private String team;
 
     @Column(name = "monthly_amount", precision = 12, scale = 0)
     private BigDecimal monthlyAmount = BigDecimal.ZERO;
@@ -55,6 +61,12 @@ public class Budget {
 
     public String getDivision() { return division; }
     public void setDivision(String division) { this.division = division; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getTeam() { return team; }
+    public void setTeam(String team) { this.team = team; }
 
     public BigDecimal getMonthlyAmount() { return monthlyAmount; }
     public void setMonthlyAmount(BigDecimal monthlyAmount) { this.monthlyAmount = monthlyAmount; }

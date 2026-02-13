@@ -6,8 +6,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.bugs.productmanager.config.CustomUserPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,12 +75,14 @@ public class LoginController {
         appUserRepository.save(appUser);
 
         // SecurityContext 갱신
-        UserDetails updatedUser = new User(
+        CustomUserPrincipal updatedUser = new CustomUserPrincipal(
                 appUser.getUsername(),
                 appUser.getPassword(),
                 appUser.isEnabled(),
-                true, true, true,
-                List.of(new SimpleGrantedAuthority(appUser.getRole()))
+                List.of(new SimpleGrantedAuthority(appUser.getRole())),
+                appUser.getCompany(),
+                appUser.getDepartment(),
+                appUser.getTeam()
         );
         Authentication newAuth = new UsernamePasswordAuthenticationToken(
                 updatedUser, updatedUser.getPassword(), updatedUser.getAuthorities());

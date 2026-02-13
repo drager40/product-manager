@@ -32,7 +32,7 @@ public class ExcelService {
 
     public record UploadResult(int budgetCount, int expenseCount) {}
 
-    public UploadResult importExcel(MultipartFile file, String ym) throws IOException {
+    public UploadResult importExcel(MultipartFile file, String ym, String department, String team) throws IOException {
         try (InputStream is = file.getInputStream();
              Workbook workbook = WorkbookFactory.create(is)) {
 
@@ -81,6 +81,8 @@ public class ExcelService {
                     budget.setYm(sectionYm);
                     budget.setCategory(cat);
                     budget.setDivision(div);
+                    budget.setDepartment(department);
+                    budget.setTeam(team);
                     budget.setMonthlyAmount(BigDecimal.valueOf((long) monthly));
                     budget.setPrevRemaining(BigDecimal.valueOf((long) prevRem));
                     budgetService.saveOrUpdate(budget);
@@ -92,6 +94,8 @@ public class ExcelService {
 
                         Expense expense = parseExpenseRow(dataRow, sectionYm, cat, div, defaultDate);
                         if (expense != null) {
+                            expense.setDepartment(department);
+                            expense.setTeam(team);
                             expenseService.save(expense);
                             expenseCount++;
                         }
@@ -233,22 +237,26 @@ public class ExcelService {
             CellStyle sumStyle = createSumStyle(workbook);
             CellStyle dateStyle = createDateStyle(workbook);
 
-            // Group expenses by category + division
+            // Group expenses by category + division + department + team
             Map<String, List<Expense>> grouped = expenses.stream()
                     .collect(Collectors.groupingBy(
-                            e -> e.getCategory() + " - " + e.getDivision(),
+                            e -> e.getCategory() + " - " + e.getDivision()
+                                    + (e.getDepartment() != null && !e.getDepartment().isEmpty() ? " [" + e.getDepartment() + (e.getTeam() != null && !e.getTeam().isEmpty() ? "/" + e.getTeam() : "") + "]" : ""),
                             LinkedHashMap::new,
                             Collectors.toList()));
 
             // Budget lookup map
             Map<String, Budget> budgetMap = new LinkedHashMap<>();
             for (Budget b : budgets) {
-                budgetMap.put(b.getCategory() + " - " + b.getDivision(), b);
+                String key = b.getCategory() + " - " + b.getDivision()
+                        + (b.getDepartment() != null && !b.getDepartment().isEmpty() ? " [" + b.getDepartment() + (b.getTeam() != null && !b.getTeam().isEmpty() ? "/" + b.getTeam() : "") + "]" : "");
+                budgetMap.put(key, b);
             }
 
             // Add budget-only sections
             for (Budget b : budgets) {
-                String key = b.getCategory() + " - " + b.getDivision();
+                String key = b.getCategory() + " - " + b.getDivision()
+                        + (b.getDepartment() != null && !b.getDepartment().isEmpty() ? " [" + b.getDepartment() + (b.getTeam() != null && !b.getTeam().isEmpty() ? "/" + b.getTeam() : "") + "]" : "");
                 if (!grouped.containsKey(key)) {
                     grouped.put(key, new ArrayList<>());
                 }

@@ -50,13 +50,14 @@
             </div>
 
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group" th:with="catLocked=${userRole != 'ROLE_ADMIN'}">
                     <label>회사</label>
-                    <select th:field="*{category}" required>
+                    <select th:field="*{category}" th:required="${!catLocked}" id="catSelect" th:disabled="${catLocked}">
                         <option value="">선택</option>
                         <option value="LINK">LINK</option>
                         <option value="BUGS">BUGS</option>
                     </select>
+                    <input th:if="${catLocked}" type="hidden" name="category" th:value="${budget.category}"/>
                 </div>
                 <div class="form-group">
                     <label>계정</label>
@@ -67,6 +68,25 @@
                         <option value="대외">대외</option>
                         <option value="임원">임원</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" th:with="deptLocked=${userRole == 'ROLE_DEPARTMENT' || userRole == 'ROLE_TEAM'}">
+                    <label>실</label>
+                    <select th:field="*{department}" id="deptSelect" th:disabled="${deptLocked}">
+                        <option value="">전체 (회사)</option>
+                        <option value="BUGS개발실">BUGS개발실</option>
+                        <option value="LINK개발실">LINK개발실</option>
+                    </select>
+                    <input th:if="${deptLocked}" type="hidden" name="department" th:value="${budget.department}"/>
+                </div>
+                <div class="form-group" th:with="teamLocked=${userRole == 'ROLE_TEAM'}">
+                    <label>팀</label>
+                    <select th:field="*{team}" id="teamSelect" th:disabled="${teamLocked}">
+                        <option value="">전체 (실)</option>
+                    </select>
+                    <input th:if="${teamLocked}" type="hidden" name="team" th:value="${budget.team}"/>
                 </div>
             </div>
 
@@ -89,6 +109,43 @@
 </div>
 <script th:inline="javascript">
 (function() {
+    // 실/팀 캐스케이딩
+    var DEPT_TEAM_MAP = {
+        'BUGS개발실': ['프론트개발팀', '백앤드개발팀'],
+        'LINK개발실': ['서비스개발팀', '운영개발팀']
+    };
+    var deptSelect = document.getElementById('deptSelect');
+    var teamSelect = document.getElementById('teamSelect');
+    var currentTeam = /*[[${budget.team}]]*/ '';
+
+    function updateTeamOptions() {
+        var dept = deptSelect ? deptSelect.value : '';
+        if (!teamSelect) return;
+        teamSelect.innerHTML = '<option value="">선택</option>';
+        if (dept && DEPT_TEAM_MAP[dept]) {
+            DEPT_TEAM_MAP[dept].forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === currentTeam) opt.selected = true;
+                teamSelect.appendChild(opt);
+            });
+        }
+    }
+    if (deptSelect) {
+        deptSelect.addEventListener('change', function() { currentTeam = ''; updateTeamOptions(); });
+        updateTeamOptions();
+    }
+
+    // submit 시 disabled select 해제 (브라우저 유효성 검사 우회)
+    var form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var disabled = form.querySelectorAll('select[disabled]');
+            disabled.forEach(function(el) { el.disabled = false; });
+        });
+    }
+
     var returnFilter = /*[[${returnFilter}]]*/ '';
     if (returnFilter) {
         var cancelBtn = document.getElementById('cancelBtn');

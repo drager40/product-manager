@@ -99,7 +99,11 @@
 </div>
 
 <div class="container">
-    <div class="dash-title" th:text="${currentYm} + ' 이번 달 현황'"></div>
+    <div class="dash-title">
+        <span th:text="${currentYm} + ' 이번 달 현황'"></span>
+        <span th:if="${userDepartment != null}" style="font-size:13px; color:#888; font-weight:400; margin-left:8px;"
+              th:text="'(' + ${userDepartment} + (${userTeam != null ? ' / ' + userTeam : ''}) + ')'"></span>
+    </div>
 
     <div class="cards">
         <div class="card primary">

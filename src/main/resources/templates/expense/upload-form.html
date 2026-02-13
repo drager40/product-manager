@@ -62,6 +62,25 @@
                 <input type="text" name="ym" placeholder="2026-01 (선택사항)" th:value="${ym}"/>
             </div>
 
+            <div class="form-group" style="display:flex; gap:16px;">
+                <div style="flex:1;">
+                    <label>실</label>
+                    <select name="department" id="deptSelect" th:disabled="${!isAdmin}" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
+                        <option value="">선택</option>
+                        <option value="BUGS개발실" th:selected="${userDepartment == 'BUGS개발실'}">BUGS개발실</option>
+                        <option value="LINK개발실" th:selected="${userDepartment == 'LINK개발실'}">LINK개발실</option>
+                    </select>
+                    <input th:if="${!isAdmin}" type="hidden" name="department" th:value="${userDepartment}"/>
+                </div>
+                <div style="flex:1;">
+                    <label>팀</label>
+                    <select name="team" id="teamSelect" th:disabled="${!isAdmin}" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
+                        <option value="">선택 (실 먼저 선택)</option>
+                    </select>
+                    <input th:if="${!isAdmin}" type="hidden" name="team" th:value="${userTeam}"/>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>엑셀 파일 (.xlsx)</label>
                 <div class="file-input-wrapper">
@@ -76,5 +95,35 @@
         </form>
     </div>
 </div>
+<script th:inline="javascript">
+(function() {
+    var DEPT_TEAM_MAP = {
+        'BUGS개발실': ['프론트개발팀', '백앤드개발팀'],
+        'LINK개발실': ['서비스개발팀', '운영개발팀']
+    };
+    var deptSelect = document.getElementById('deptSelect');
+    var teamSelect = document.getElementById('teamSelect');
+    var currentTeam = /*[[${userTeam}]]*/ '';
+
+    function updateTeamOptions() {
+        var dept = deptSelect ? deptSelect.value : '';
+        if (!teamSelect) return;
+        teamSelect.innerHTML = '<option value="">선택</option>';
+        if (dept && DEPT_TEAM_MAP[dept]) {
+            DEPT_TEAM_MAP[dept].forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === currentTeam) opt.selected = true;
+                teamSelect.appendChild(opt);
+            });
+        }
+    }
+    if (deptSelect) {
+        deptSelect.addEventListener('change', function() { currentTeam = ''; updateTeamOptions(); });
+        updateTeamOptions();
+    }
+})();
+</script>
 </body>
 </html>

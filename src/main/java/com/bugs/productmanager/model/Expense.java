@@ -22,6 +22,12 @@ public class Expense {
     @Column(nullable = false, length = 20)
     private String division;
 
+    @Column(length = 50)
+    private String department;
+
+    @Column(length = 50)
+    private String team;
+
     @Column(name = "expense_date")
     private LocalDate expenseDate;
 
@@ -66,6 +72,12 @@ public class Expense {
 
     public String getDivision() { return division; }
     public void setDivision(String division) { this.division = division; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public String getTeam() { return team; }
+    public void setTeam(String team) { this.team = team; }
 
     public LocalDate getExpenseDate() { return expenseDate; }
     public void setExpenseDate(LocalDate expenseDate) { this.expenseDate = expenseDate; }

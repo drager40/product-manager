@@ -95,10 +95,39 @@
 
             <div class="form-group">
                 <label>역할</label>
-                <select th:field="*{role}">
-                    <option value="ROLE_USER">USER</option>
-                    <option value="ROLE_ADMIN">ADMIN</option>
+                <select th:field="*{role}" id="roleSelect">
+                    <option value="ROLE_ADMIN">ADMIN (전체)</option>
+                    <option value="ROLE_COMPANY">COMPANY (회사)</option>
+                    <option value="ROLE_DEPARTMENT">DEPARTMENT (실)</option>
+                    <option value="ROLE_TEAM">TEAM (팀)</option>
                 </select>
+                <div class="hint">ADMIN=전체, COMPANY=회사, DEPARTMENT=실, TEAM=팀 단위 접근</div>
+            </div>
+
+            <div class="form-group" id="companyGroup">
+                <label>회사</label>
+                <select th:field="*{company}" id="companySelect">
+                    <option value="">선택</option>
+                    <option value="BUGS">BUGS</option>
+                    <option value="LINK">LINK</option>
+                </select>
+                <div class="hint">COMPANY/DEPARTMENT/TEAM 역할은 회사 지정 필요</div>
+            </div>
+
+            <div class="form-group" id="deptGroup">
+                <label>실</label>
+                <select th:field="*{department}" id="deptSelect">
+                    <option value="">선택 (회사 먼저 선택)</option>
+                </select>
+                <div class="hint">DEPARTMENT/TEAM 역할은 실 지정 필요</div>
+            </div>
+
+            <div class="form-group" id="teamGroup">
+                <label>팀</label>
+                <select th:field="*{team}" id="teamSelect">
+                    <option value="">선택 (실 먼저 선택)</option>
+                </select>
+                <div class="hint">TEAM 역할은 팀 지정 필요</div>
             </div>
 
             <div class="form-group">
@@ -116,7 +145,7 @@
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
 function toggleDarkMode() {
     var isDark = document.body.classList.toggle('dark');
     localStorage.setItem('darkMode', isDark ? 'true' : 'false');
@@ -127,6 +156,76 @@ function toggleDarkMode() {
         document.body.classList.add('dark');
         document.getElementById('themeBtn').textContent = '\u2600\uFE0F';
     }
+
+    // 회사→실→팀 캐스케이딩
+    var COMPANY_DEPT_MAP = {
+        'BUGS': ['BUGS개발실'],
+        'LINK': ['LINK개발실']
+    };
+    var DEPT_TEAM_MAP = {
+        'BUGS개발실': ['프론트개발팀', '백앤드개발팀'],
+        'LINK개발실': ['서비스개발팀', '운영개발팀']
+    };
+    var roleSelect = document.getElementById('roleSelect');
+    var companySelect = document.getElementById('companySelect');
+    var deptSelect = document.getElementById('deptSelect');
+    var teamSelect = document.getElementById('teamSelect');
+    var companyGroup = document.getElementById('companyGroup');
+    var deptGroup = document.getElementById('deptGroup');
+    var teamGroup = document.getElementById('teamGroup');
+    var currentDept = /*[[${user.department}]]*/ '';
+    var currentTeam = /*[[${user.team}]]*/ '';
+
+    function updateDeptOptions() {
+        var comp = companySelect ? companySelect.value : '';
+        if (!deptSelect) return;
+        deptSelect.innerHTML = '<option value="">선택</option>';
+        if (comp && COMPANY_DEPT_MAP[comp]) {
+            COMPANY_DEPT_MAP[comp].forEach(function(d) {
+                var opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                if (d === currentDept) opt.selected = true;
+                deptSelect.appendChild(opt);
+            });
+        }
+    }
+
+    function updateTeamOptions() {
+        var dept = deptSelect ? deptSelect.value : '';
+        if (!teamSelect) return;
+        teamSelect.innerHTML = '<option value="">선택</option>';
+        if (dept && DEPT_TEAM_MAP[dept]) {
+            DEPT_TEAM_MAP[dept].forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === currentTeam) opt.selected = true;
+                teamSelect.appendChild(opt);
+            });
+        }
+    }
+
+    function updateVisibility() {
+        var role = roleSelect ? roleSelect.value : '';
+        if (companyGroup) companyGroup.style.display = (role === 'ROLE_ADMIN') ? 'none' : '';
+        if (deptGroup) deptGroup.style.display = (role === 'ROLE_ADMIN' || role === 'ROLE_COMPANY') ? 'none' : '';
+        if (teamGroup) teamGroup.style.display = (role === 'ROLE_TEAM') ? '' : 'none';
+    }
+
+    if (companySelect) {
+        companySelect.addEventListener('change', function() { currentDept = ''; currentTeam = ''; updateDeptOptions(); updateTeamOptions(); });
+    }
+    if (deptSelect) {
+        deptSelect.addEventListener('change', function() { currentTeam = ''; updateTeamOptions(); });
+    }
+    if (roleSelect) {
+        roleSelect.addEventListener('change', updateVisibility);
+    }
+
+    updateDeptOptions();
+    updateTeamOptions();
+    updateVisibility();
 })();
 </script>
 </body>

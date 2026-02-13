@@ -64,6 +64,9 @@ public class UserController {
             existing.setUsername(user.getUsername());
             existing.setRole(user.getRole());
             existing.setEnabled(user.isEnabled());
+            existing.setCompany(user.getCompany());
+            existing.setDepartment(user.getDepartment());
+            existing.setTeam(user.getTeam());
             // 비밀번호: 입력했으면 변경, 비어있으면 기존 유지
             if (rawPassword != null && !rawPassword.trim().isEmpty()) {
                 existing.setPassword(passwordEncoder.encode(rawPassword.trim()));
